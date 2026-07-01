@@ -15,7 +15,7 @@ describe('ReportCard', () => {
   it('タイトルとレース名を表示する', () => {
     render(<ReportCard report={mockReport} />)
     expect(screen.getByText(/七夕賞・プロキオンS分析/)).toBeInTheDocument()
-    expect(screen.getAllByText(/七夕賞/).length).toBeGreaterThan(0)
+    expect(screen.getAllByText(/七夕賞/)).toHaveLength(2)
   })
 
   it('的中結果がある場合は表示する', () => {
