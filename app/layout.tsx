@@ -13,6 +13,7 @@ export const metadata: Metadata = {
     title: '馬券ファクト | データで読む競馬予想',
     description: '調教・騎手コメント・コース傾向を徹底分析。論理的な買い目予想を毎週公開。',
     type: 'website',
+    locale: 'ja_JP',
   },
 }
 
