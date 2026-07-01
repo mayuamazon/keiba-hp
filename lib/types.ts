@@ -46,6 +46,7 @@ export interface JockeyStat {
   recentForm: string
   strongTracks: Track[]
   note: string
+  isActive?: boolean
 }
 
 export interface TrainingCheck {
@@ -54,8 +55,8 @@ export interface TrainingCheck {
   raceDate: string
   trackId: Track
   trainingTime: string
-  trainerComment: string
-  jockeyComment: string
+  trainerComment?: string
+  jockeyComment?: string
   evaluation: TrainingGrade
   evaluationNote: string
 }

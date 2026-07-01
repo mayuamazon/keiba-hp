@@ -30,6 +30,7 @@ export const jockeys: JockeyStat[] = [
     recentForm: '―',
     strongTracks: [],
     note: '2022年引退。現在は調教師として活躍中。',
+    isActive: false,
   },
   {
     name: '戸崎圭太',
