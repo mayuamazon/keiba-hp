@@ -58,7 +58,7 @@ export interface TrainingCheck {
   trainerComment?: string
   jockeyComment?: string
   evaluation: TrainingGrade
-  evaluationNote: string
+  evaluationNote?: string
 }
 
 export interface WeeklyReportMeta {

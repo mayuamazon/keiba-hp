@@ -30,8 +30,8 @@ export default function TrainingPage() {
       </p>
 
       <div className="mt-8 flex flex-col gap-4">
-        {thisWeekTraining.map((t) => (
-          <TrainingCard key={t.horseName} training={t} />
+        {thisWeekTraining.map((t, i) => (
+          <TrainingCard key={`${t.horseName}-${i}`} training={t} />
         ))}
       </div>
 

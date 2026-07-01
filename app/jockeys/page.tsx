@@ -1,5 +1,12 @@
 import { jockeys } from '@/lib/data/jockeys'
 import { Badge } from '@/components/ui/badge'
+import type { Track } from '@/lib/types'
+
+const trackNames: Record<Track, string> = {
+  tokyo: '東京', nakayama: '中山', hanshin: '阪神', kyoto: '京都',
+  chukyo: '中京', kokura: '小倉', fukushima: '福島', niigata: '新潟',
+  hakodate: '函館', sapporo: '札幌',
+}
 
 export const metadata = {
   title: '騎手・調教師データ | 馬券ファクト',
@@ -45,7 +52,7 @@ export default function JockeysPage() {
                         variant="outline"
                         className="border-navy-600 text-xs text-gray-400"
                       >
-                        {t}
+                        {trackNames[t]}
                       </Badge>
                     ))}
                   </div>
