@@ -46,8 +46,8 @@ export function CourseTable({ course }: CourseTableProps) {
                   }
                 >
                   <td className="py-0.5">{f.frame}枠</td>
-                  <td className="py-0.5 text-right">{f.winRate}%</td>
-                  <td className="py-0.5 text-right">{f.placeRate}%</td>
+                  <td className="py-0.5 text-right">{f.winRate.toFixed(1)}%</td>
+                  <td className="py-0.5 text-right">{f.placeRate.toFixed(1)}%</td>
                 </tr>
               ))}
             </tbody>
@@ -78,8 +78,8 @@ export function CourseTable({ course }: CourseTableProps) {
                   }
                 >
                   <td className="py-0.5">{s.style}</td>
-                  <td className="py-0.5 text-right">{s.winRate}%</td>
-                  <td className="py-0.5 text-right">{s.placeRate}%</td>
+                  <td className="py-0.5 text-right">{s.winRate.toFixed(1)}%</td>
+                  <td className="py-0.5 text-right">{s.placeRate.toFixed(1)}%</td>
                 </tr>
               ))}
             </tbody>
