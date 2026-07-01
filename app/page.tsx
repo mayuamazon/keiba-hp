@@ -1,65 +1,92 @@
-import Image from "next/image";
+import { getAllReportMeta } from '@/lib/reports'
+import { ReportCard } from '@/components/report-card'
 
-export default function Home() {
+export default async function HomePage() {
+  const reports = await getAllReportMeta()
+  const latest = reports[0]
+  const recent = reports.slice(0, 6)
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
+    <div className="mx-auto max-w-6xl px-4 py-12">
+      {/* ヒーローセクション */}
+      <section className="text-center">
+        <h1 className="text-4xl font-bold text-gold-400">馬券ファクト</h1>
+        <p className="mt-3 text-xl text-gray-300">調べ尽くして、論理で買う。</p>
+        <p className="mt-4 text-sm text-gray-500 max-w-xl mx-auto">
+          調教タイム・騎手コメント・コース傾向・ペース想定を全部拾って、
+          データで根拠を示す競馬予想サイト。毎週月〜火曜更新。
+        </p>
+        <div className="mt-6 flex justify-center gap-3">
           <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
+            href="https://note.com"
             target="_blank"
             rel="noopener noreferrer"
+            className="rounded bg-gold-500 px-5 py-2.5 font-semibold text-navy-900 hover:bg-gold-400 transition-colors"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
+            買い目を見る（Note）
           </a>
           <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+            href="/report"
+            className="rounded border border-gold-500 px-5 py-2.5 font-semibold text-gold-400 hover:bg-navy-800 transition-colors"
           >
-            Documentation
+            週次レポート →
           </a>
         </div>
-      </main>
+      </section>
+
+      {/* 最新レポート */}
+      {latest && (
+        <section className="mt-16">
+          <h2 className="text-lg font-semibold text-gray-200 mb-4">
+            📋 最新レポート
+          </h2>
+          <ReportCard report={latest} />
+        </section>
+      )}
+
+      {/* 過去レポート */}
+      {recent.length > 1 && (
+        <section className="mt-12">
+          <h2 className="text-lg font-semibold text-gray-200 mb-4">
+            過去のレポート
+          </h2>
+          <div className="grid gap-4 md:grid-cols-2">
+            {recent.slice(1).map((report) => (
+              <ReportCard key={report.slug} report={report} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* サイト特徴 */}
+      <section className="mt-16 grid gap-4 md:grid-cols-3">
+        {[
+          {
+            icon: '🔬',
+            title: '調教・コメント分析',
+            desc: '調教タイム・調教師コメント・騎手コメントを毎週収集して評価',
+          },
+          {
+            icon: '📊',
+            title: 'コース傾向データ',
+            desc: '競馬場・コース別の枠番成績・脚質傾向を常時掲載',
+          },
+          {
+            icon: '📝',
+            title: '外れた理由も公開',
+            desc: '的中・不的中問わず毎週振り返りを公開。言いっぱなしにしない',
+          },
+        ].map(({ icon, title, desc }) => (
+          <div
+            key={title}
+            className="rounded-lg border border-navy-700 bg-navy-800 p-5"
+          >
+            <span className="text-2xl">{icon}</span>
+            <h3 className="mt-2 font-semibold text-gray-100">{title}</h3>
+            <p className="mt-1 text-sm text-gray-400">{desc}</p>
+          </div>
+        ))}
+      </section>
     </div>
-  );
+  )
 }
