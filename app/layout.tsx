@@ -3,6 +3,7 @@ import { Inter, Noto_Sans_JP, Zen_Old_Mincho } from 'next/font/google'
 import './globals.css'
 import { Nav } from '@/components/nav'
 import { Footer } from '@/components/footer'
+import { Providers } from './providers'
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
 const notoSansJP = Noto_Sans_JP({
@@ -36,9 +37,11 @@ export default function RootLayout({
       <body
         className={`${inter.variable} ${notoSansJP.variable} ${zenOldMincho.variable} bg-paddock-950 font-sans text-foreground`}
       >
-        <Nav />
-        <main className="min-h-screen">{children}</main>
-        <Footer />
+        <Providers>
+          <Nav />
+          <main className="min-h-screen">{children}</main>
+          <Footer />
+        </Providers>
       </body>
     </html>
   )
