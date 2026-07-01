@@ -11,7 +11,7 @@ export function ReportCard({ report }: ReportCardProps) {
 
   return (
     <Link href={`/report/${slug}`}>
-      <div className="group rounded-lg border border-navy-700 bg-navy-800 p-5 transition-colors hover:border-gold-500">
+      <div className="group rounded-lg border border-paddock-700 bg-paddock-800 p-5 transition-colors hover:border-gold-500">
         <div className="flex items-start justify-between gap-2">
           <time className="text-xs text-gray-500">{date}</time>
           {results && results.totalRaces > 0 && (
@@ -29,7 +29,7 @@ export function ReportCard({ report }: ReportCardProps) {
             <Badge
               key={race}
               variant="outline"
-              className="border-navy-600 text-xs text-gray-400"
+              className="border-paddock-600 text-xs text-muted-foreground"
             >
               {race}
             </Badge>
