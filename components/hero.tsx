@@ -192,10 +192,10 @@ export function Hero() {
                 bottom: 0,
                 left: 0,
                 width: 240,
-                height: 140,
+                height: 128,
                 color: 'var(--color-gold-400)',
                 filter:
-                  'drop-shadow(0 0 10px oklch(0.62 0.11 85 / 0.55))',
+                  'drop-shadow(0 0 10px color-mix(in oklab, var(--color-gold-600) 55%, transparent))',
               }}
             />
           </motion.div>
