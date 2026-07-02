@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import Link from 'next/link'
 import { motion, useAnimation, useReducedMotion, useScroll, useTransform } from 'framer-motion'
 import { HorseSilhouette } from '@/components/horse-silhouette'
 
@@ -260,36 +261,16 @@ export function Hero() {
             href="https://note.com"
             target="_blank"
             rel="noopener noreferrer"
-            className="rounded px-6 py-3 text-sm font-bold transition-colors"
-            style={{
-              background: 'var(--color-gold-500)',
-              color: 'var(--color-paddock-950)',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'var(--color-gold-400)'
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'var(--color-gold-500)'
-            }}
+            className="rounded px-6 py-3 text-sm font-bold transition-colors bg-gold-500 text-paddock-950 hover:bg-gold-400"
           >
             買い目を見る（Note）
           </a>
-          <a
+          <Link
             href="/report"
-            className="rounded px-6 py-3 text-sm font-semibold transition-colors"
-            style={{
-              border: '1px solid var(--color-turf-500)',
-              color: 'var(--color-turf-400)',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'oklch(0.55 0.13 150 / 0.18)'
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'transparent'
-            }}
+            className="rounded px-6 py-3 text-sm font-semibold transition-colors border border-turf-500 text-turf-400 hover:bg-turf-600/20"
           >
             週次レポート →
-          </a>
+          </Link>
         </motion.div>
       </div>
     </section>

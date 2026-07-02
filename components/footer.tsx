@@ -8,7 +8,7 @@ export function Footer() {
         className="pointer-events-none absolute inset-x-0 top-0 h-px"
         style={{
           background:
-            'linear-gradient(to right, transparent, oklch(0.72 0.12 88 / 0.4) 40%, transparent)',
+            'linear-gradient(to right, transparent, color-mix(in oklab, var(--color-gold-500) 40%, transparent) 40%, transparent)',
         }}
         aria-hidden="true"
       />

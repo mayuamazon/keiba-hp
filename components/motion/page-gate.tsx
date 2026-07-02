@@ -27,7 +27,7 @@ export function PageGate() {
         animate={{ x: '-100%' }}
         transition={panelTransition}
         className="h-full w-1/2 bg-paddock-950"
-        style={{ borderRight: '1px solid oklch(0.72 0.12 88 / 0.35)' }}
+        style={{ borderRight: '1px solid color-mix(in oklab, var(--color-gold-500) 35%, transparent)' }}
       />
       {/* Right panel */}
       <motion.div
@@ -35,7 +35,7 @@ export function PageGate() {
         animate={{ x: '100%' }}
         transition={panelTransition}
         className="h-full w-1/2 bg-paddock-950"
-        style={{ borderLeft: '1px solid oklch(0.72 0.12 88 / 0.35)' }}
+        style={{ borderLeft: '1px solid color-mix(in oklab, var(--color-gold-500) 35%, transparent)' }}
       />
     </div>
   )

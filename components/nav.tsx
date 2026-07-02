@@ -27,7 +27,7 @@ export function Nav() {
         className="pointer-events-none absolute inset-x-0 bottom-0 h-px"
         style={{
           background:
-            'linear-gradient(to right, transparent, oklch(0.72 0.12 88 / 0.4) 40%, transparent)',
+            'linear-gradient(to right, transparent, color-mix(in oklab, var(--color-gold-500) 40%, transparent) 40%, transparent)',
         }}
         aria-hidden="true"
       />
@@ -126,7 +126,7 @@ export function Nav() {
             exit={{ opacity: 0, y: -12 }}
             transition={{ duration: 0.3, ease: EASE_GATE }}
             className="md:hidden overflow-hidden border-t bg-paddock-900 px-4 pb-5 pt-3"
-            style={{ borderTopColor: 'oklch(0.31 0.035 158)' }}
+            style={{ borderTopColor: 'var(--color-paddock-700)' }}
           >
             <nav className="flex flex-col gap-1" aria-label="モバイルナビゲーション">
               {navLinks.map(({ href, label }, i) => (
@@ -144,7 +144,7 @@ export function Nav() {
                       color:
                         pathname === href
                           ? 'var(--color-gold-400)'
-                          : 'oklch(0.8 0.01 140)',
+                          : 'var(--color-muted-foreground)',
                     }}
                   >
                     {label}
