@@ -28,13 +28,16 @@ interface RunnerConfig {
   color: string
   ease: BezierEase
   reducedOffset: number
+  // ラベルのオフセット（団子時の重なり回避・馬ごと交互配置）
+  //   逃げ・差し＝マーカー上（-20）／先行・追込＝マーカー下（+28）
+  labelDy: number
 }
 
 const RUNNERS: RunnerConfig[] = [
-  { style: '逃げ', color: 'var(--color-silks-red)',    ease: [0,    0,    0.18, 1],  reducedOffset: 0.97 },
-  { style: '先行', color: 'var(--color-silks-orange)', ease: [0.08, 0,    0.4,  1],  reducedOffset: 0.94 },
-  { style: '差し', color: 'var(--color-silks-blue)',   ease: [0.52, 0,    0.82, 1],  reducedOffset: 0.91 },
-  { style: '追込', color: 'var(--color-silks-purple)', ease: [0.78, 0,    0.98, 1],  reducedOffset: 0.88 },
+  { style: '逃げ', color: 'var(--color-silks-red)',    ease: [0,    0,    0.18, 1],  reducedOffset: 0.97, labelDy: -20 },
+  { style: '先行', color: 'var(--color-silks-orange)', ease: [0.08, 0,    0.4,  1],  reducedOffset: 0.94, labelDy:  28 },
+  { style: '差し', color: 'var(--color-silks-blue)',   ease: [0.52, 0,    0.82, 1],  reducedOffset: 0.91, labelDy: -20 },
+  { style: '追込', color: 'var(--color-silks-purple)', ease: [0.78, 0,    0.98, 1],  reducedOffset: 0.88, labelDy:  28 },
 ]
 
 // ─── RunnerDot（1馬）────────────────────────────────────────────
@@ -46,6 +49,7 @@ interface RunnerDotProps {
   isPlaying: boolean
   shouldReduceMotion: boolean
   reducedOffset: number
+  labelDy: number
 }
 
 function RunnerDot({
@@ -56,6 +60,7 @@ function RunnerDot({
   isPlaying,
   shouldReduceMotion,
   reducedOffset,
+  labelDy,
 }: RunnerDotProps) {
   const circleRef = useRef<SVGCircleElement>(null)
   const textRef   = useRef<SVGTextElement>(null)
@@ -67,8 +72,8 @@ function RunnerDot({
     circleRef.current?.setAttribute('cx', String(pt.x))
     circleRef.current?.setAttribute('cy', String(pt.y))
     textRef.current?.setAttribute('x',  String(pt.x))
-    textRef.current?.setAttribute('y',  String(pt.y - 16))
-  }, [])
+    textRef.current?.setAttribute('y',  String(pt.y + labelDy))
+  }, [labelDy])
 
   // アニメーション起動（pathEl が確定してから）
   useEffect(() => {
@@ -118,7 +123,7 @@ function RunnerDot({
     <g role="presentation">
       <circle
         ref={circleRef}
-        r={11}
+        r={15}
         fill={color}
         stroke="white"
         strokeWidth={2}
@@ -127,7 +132,7 @@ function RunnerDot({
       <text
         ref={textRef}
         textAnchor="middle"
-        fontSize={10}
+        fontSize={14}
         fontWeight="bold"
         fill="white"
         style={{ pointerEvents: 'none', userSelect: 'none' }}
@@ -255,21 +260,21 @@ export function CourseMap({ geometry, styleStats }: CourseMapProps) {
             strokeWidth={4}
             strokeLinecap="round"
           />
-          {/* GOAL ラベル（背景付き） */}
+          {/* GOAL ラベル（背景付き・ひと回り拡大） */}
           <rect
-            x={geometry.goal.x - 22}
-            y={geometry.goal.y - 56}
-            width={44}
-            height={20}
-            rx={3}
+            x={geometry.goal.x - 30}
+            y={geometry.goal.y - 62}
+            width={60}
+            height={26}
+            rx={4}
             fill="var(--color-paddock-800)"
             fillOpacity={0.85}
           />
           <text
             x={geometry.goal.x}
-            y={geometry.goal.y - 41}
+            y={geometry.goal.y - 44}
             textAnchor="middle"
-            fontSize={12}
+            fontSize={16}
             fontWeight="bold"
             fill="var(--color-gold-400)"
           >
@@ -283,9 +288,9 @@ export function CourseMap({ geometry, styleStats }: CourseMapProps) {
               x={corner.x}
               y={corner.y}
               textAnchor="middle"
-              fontSize={10}
-              fill="var(--color-muted-foreground)"
-              opacity={0.75}
+              fontSize={20}
+              fontWeight="600"
+              fill="color-mix(in oklab, var(--color-zekken) 70%, transparent)"
             >
               {corner.label}
             </text>
@@ -370,9 +375,9 @@ export function CourseMap({ geometry, styleStats }: CourseMapProps) {
             x={vbWidth / 2}
             y={vbHeight - 14}
             textAnchor="middle"
-            fontSize={13}
+            fontSize={22}
             fontWeight="600"
-            fill="var(--color-gold-400)"
+            fill="var(--color-gold-300)"
           >
             {geometry.straightLabel}
           </text>
@@ -388,6 +393,7 @@ export function CourseMap({ geometry, styleStats }: CourseMapProps) {
               isPlaying={isPlaying && !shouldReduceMotion}
               shouldReduceMotion={shouldReduceMotion}
               reducedOffset={runner.reducedOffset}
+              labelDy={runner.labelDy}
             />
           ))}
         </svg>
@@ -399,11 +405,11 @@ export function CourseMap({ geometry, styleStats }: CourseMapProps) {
           {!shouldReduceMotion && (
             <button
               onClick={() => setIsPlaying((p) => !p)}
-              className="flex items-center gap-1.5 rounded-full border border-paddock-700 bg-paddock-800 px-3 py-1 text-sm text-gold-400 hover:border-gold-500 transition-colors"
+              className="flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border border-paddock-700 bg-paddock-800 px-3.5 py-1.5 text-sm text-gold-400 hover:border-gold-500 transition-colors"
               aria-label={isPlaying ? 'アニメーションを一時停止' : 'アニメーションを再生'}
             >
               {isPlaying ? '⏸' : '▶'}{' '}
-              <span className="text-xs">{isPlaying ? '一時停止' : '再生'}</span>
+              <span className="whitespace-nowrap text-xs">{isPlaying ? '一時停止' : '再生'}</span>
             </button>
           )}
           <span className="rounded-md border border-paddock-700 bg-paddock-800 px-2 py-0.5 text-xs text-muted-foreground">

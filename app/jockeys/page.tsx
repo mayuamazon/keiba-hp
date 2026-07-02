@@ -21,6 +21,12 @@ const DIRECTIONS = ['left', 'up', 'right'] as const
 export default function JockeysPage() {
   const activeJockeys = jockeys.filter((j) => j.isActive !== false)
 
+  // 勝率1位の判定（表示上のハイライトのみ・データ順は変更しない）
+  const topJockey = activeJockeys.reduce<(typeof activeJockeys)[number] | null>(
+    (top, j) => (top === null || j.winRate > top.winRate ? j : top),
+    null,
+  )
+
   return (
     <div className="mx-auto max-w-4xl px-4 py-12">
       <h1 className="font-heading text-2xl font-bold text-gold-shimmer animate-shimmer">
@@ -31,17 +37,32 @@ export default function JockeysPage() {
       </p>
 
       <div className="mt-8 grid gap-4 sm:grid-cols-2">
-        {activeJockeys.map((j, index) => (
+        {activeJockeys.map((j, index) => {
+          const isTop = j.name === topJockey?.name
+          return (
           <GateReveal
             key={j.name}
             direction={DIRECTIONS[index % 3]}
             delay={index * 0.06}
           >
             <HoverLift>
-              <div className="rounded-lg border border-paddock-700 bg-paddock-900 p-5">
+              <div
+                data-top={isTop ? 'true' : 'false'}
+                className={[
+                  'rounded-lg border p-5 transition-colors',
+                  isTop
+                    ? 'border-gold-500 bg-paddock-800'
+                    : 'border-paddock-700 bg-paddock-900',
+                ].join(' ')}
+              >
                 {/* ヘッダー：騎手名 + 勝率 */}
                 <div className="flex items-start justify-between gap-2">
-                  <h3 className="font-heading font-semibold text-gray-100">{j.name}</h3>
+                  <h3 className="flex items-center gap-1.5 font-heading font-semibold text-gray-100">
+                    {isTop && (
+                      <span className="text-gold-500" aria-label="勝率1位">★</span>
+                    )}
+                    {j.name}
+                  </h3>
                   <div className="text-right">
                     <p className="text-xs text-gray-500">勝率</p>
                     <CountUp
@@ -100,7 +121,8 @@ export default function JockeysPage() {
               </div>
             </HoverLift>
           </GateReveal>
-        ))}
+          )
+        })}
       </div>
     </div>
   )
