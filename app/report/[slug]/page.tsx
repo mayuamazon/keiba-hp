@@ -33,10 +33,10 @@ export default async function ReportPage({ params }: Props) {
   return (
     <div className="mx-auto max-w-3xl px-4 py-12">
       <time className="text-sm text-gray-500">{meta.date}</time>
-      <h1 className="mt-2 text-2xl font-bold text-gold-400">{meta.title}</h1>
+      <h1 className="mt-2 font-heading text-2xl font-bold text-gold-shimmer animate-shimmer">{meta.title}</h1>
 
       {meta.results && meta.results.totalRaces > 0 && (
-        <div className="mt-4 flex gap-4 rounded border border-navy-700 bg-navy-800 p-3 text-sm">
+        <div className="mt-4 flex gap-4 rounded border border-paddock-700 bg-paddock-900 p-3 text-sm">
           <span className="text-gray-400">結果：</span>
           <span className="text-gold-400">
             {meta.results.hits}/{meta.results.totalRaces}的中

@@ -1,3 +1,5 @@
+import { GateReveal } from '@/components/motion/gate-reveal'
+import { HoverLift } from '@/components/motion/hover-lift'
 import { TrainingCard } from '@/components/training-card'
 import { NoteCta } from '@/components/note-cta'
 import type { TrainingCheck } from '@/lib/types'
@@ -21,17 +23,29 @@ export const metadata = {
   description: '今週の重賞注目馬の調教タイム・騎手コメント・調教師コメントをまとめています。',
 }
 
+const DIRECTIONS = ['left', 'up', 'right'] as const
+
 export default function TrainingPage() {
   return (
     <div className="mx-auto max-w-4xl px-4 py-12">
-      <h1 className="text-2xl font-bold text-gold-400">調教チェック</h1>
+      <h1 className="font-heading text-2xl font-bold text-gold-shimmer animate-shimmer">
+        調教チェック
+      </h1>
       <p className="mt-2 text-sm text-gray-400">
         毎週木〜金曜に今週の重賞・注目馬の調教評価を更新します。
       </p>
 
       <div className="mt-8 flex flex-col gap-4">
         {thisWeekTraining.map((t, i) => (
-          <TrainingCard key={`${t.horseName}-${i}`} training={t} />
+          <GateReveal
+            key={`${t.horseName}-${i}`}
+            direction={DIRECTIONS[i % 3]}
+            delay={i * 0.06}
+          >
+            <HoverLift>
+              <TrainingCard training={t} />
+            </HoverLift>
+          </GateReveal>
         ))}
       </div>
 
