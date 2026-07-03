@@ -131,3 +131,43 @@ describe('CourseMap', () => {
     expect(screen.getByText('テストノート')).toBeInTheDocument()
   })
 })
+
+// ─── styleStats なし（準備中） ───────────────────────────────────
+describe('CourseMap (styleStats なし)', () => {
+  it('styleStats が undefined でもコース図 SVG を表示する', () => {
+    render(<CourseMap geometry={mockGeometry} />)
+    expect(
+      screen.getByRole('img', { name: /コース図/ }),
+    ).toBeInTheDocument()
+  })
+
+  it('styleStats が undefined のとき「勝率データ準備中」を表示する', () => {
+    render(<CourseMap geometry={mockGeometry} />)
+    expect(screen.getByText(/勝率データ準備中/)).toBeInTheDocument()
+  })
+
+  it('styleStats が undefined のとき勝率数値ラベルを表示しない', () => {
+    render(<CourseMap geometry={mockGeometry} />)
+    expect(screen.queryAllByText('勝率')).toHaveLength(0)
+  })
+
+  it('styleStats が undefined でも脚質凡例 4 つを表示する', () => {
+    render(<CourseMap geometry={mockGeometry} />)
+    expect(screen.getByTestId('legend-逃げ')).toBeInTheDocument()
+    expect(screen.getByTestId('legend-先行')).toBeInTheDocument()
+    expect(screen.getByTestId('legend-差し')).toBeInTheDocument()
+    expect(screen.getByTestId('legend-追込')).toBeInTheDocument()
+  })
+
+  it('styleStats が undefined のとき全凡例の data-top が false', () => {
+    render(<CourseMap geometry={mockGeometry} />)
+    expect(screen.getByTestId('legend-逃げ')).toHaveAttribute('data-top', 'false')
+    expect(screen.getByTestId('legend-差し')).toHaveAttribute('data-top', 'false')
+  })
+
+  it('styleStats が undefined でもランナーアニメ用パスが存在する', () => {
+    const { container } = render(<CourseMap geometry={mockGeometry} />)
+    // 不可視の参照パスが描画されている
+    expect(container.querySelector('path[aria-hidden="true"]')).toBeInTheDocument()
+  })
+})

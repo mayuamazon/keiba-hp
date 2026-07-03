@@ -24,8 +24,8 @@ export interface CourseData {
   trackName: string
   distance: number
   surface: Surface
-  frameStats: FrameStat[]
-  runningStyleStats: RunningStyleStat[]
+  frameStats?: FrameStat[]
+  runningStyleStats?: RunningStyleStat[]
   keyFactor: string
   note: string
 }

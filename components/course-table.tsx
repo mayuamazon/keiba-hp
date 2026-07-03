@@ -1,4 +1,4 @@
-import type { CourseData } from '@/lib/types'
+import type { CourseData, FrameStat, RunningStyleStat } from '@/lib/types'
 
 interface RateCellProps {
   rate: number
@@ -32,15 +32,107 @@ interface CourseTableProps {
   course: CourseData
 }
 
+function FrameStatsTable({ frameStats }: { frameStats: FrameStat[] }) {
+  const topFrame = [...frameStats].sort((a, b) => b.winRate - a.winRate)[0]
+  const maxFrameWin   = Math.max(...frameStats.map((f) => f.winRate))
+  const maxFramePlace = Math.max(...frameStats.map((f) => f.placeRate))
+  return (
+    <div>
+      <p className="mb-2 font-heading text-xs font-semibold uppercase tracking-wider text-gray-500">
+        枠番別勝率
+      </p>
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="text-xs text-gray-500">
+            <th className="pb-1 text-left">枠</th>
+            <th className="pb-1 text-right">勝率</th>
+            <th className="pb-1 text-right">複勝率</th>
+          </tr>
+        </thead>
+        <tbody>
+          {frameStats.map((f) => {
+            const isTop = f.frame === topFrame.frame
+            return (
+              <tr
+                key={f.frame}
+                className={isTop ? 'font-semibold' : 'text-gray-300'}
+              >
+                <td className={`py-0.5 ${isTop ? 'text-gold-400' : ''}`}>
+                  {f.frame}枠
+                </td>
+                <RateCell
+                  rate={f.winRate}
+                  maxRate={maxFrameWin}
+                  barColor="var(--color-gold-600)"
+                  isTop={isTop}
+                />
+                <RateCell
+                  rate={f.placeRate}
+                  maxRate={maxFramePlace}
+                  barColor="var(--color-turf-600)"
+                  isTop={isTop}
+                />
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+function StyleStatsTable({ runningStyleStats }: { runningStyleStats: RunningStyleStat[] }) {
+  const topStyle = [...runningStyleStats].sort((a, b) => b.winRate - a.winRate)[0]
+  const maxStyleWin   = Math.max(...runningStyleStats.map((s) => s.winRate))
+  const maxStylePlace = Math.max(...runningStyleStats.map((s) => s.placeRate))
+  return (
+    <div>
+      <p className="mb-2 font-heading text-xs font-semibold uppercase tracking-wider text-gray-500">
+        脚質別勝率
+      </p>
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="text-xs text-gray-500">
+            <th className="pb-1 text-left">脚質</th>
+            <th className="pb-1 text-right">勝率</th>
+            <th className="pb-1 text-right">複勝率</th>
+          </tr>
+        </thead>
+        <tbody>
+          {runningStyleStats.map((s) => {
+            const isTop = s.style === topStyle.style
+            return (
+              <tr
+                key={s.style}
+                className={isTop ? 'font-semibold' : 'text-gray-300'}
+              >
+                <td className={`py-0.5 ${isTop ? 'text-gold-400' : ''}`}>
+                  {s.style}
+                </td>
+                <RateCell
+                  rate={s.winRate}
+                  maxRate={maxStyleWin}
+                  barColor="var(--color-gold-600)"
+                  isTop={isTop}
+                />
+                <RateCell
+                  rate={s.placeRate}
+                  maxRate={maxStylePlace}
+                  barColor="var(--color-turf-600)"
+                  isTop={isTop}
+                />
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
 export function CourseTable({ course }: CourseTableProps) {
   const surfaceLabel = course.surface === 'turf' ? '芝' : 'ダート'
-  const topFrame = [...course.frameStats].sort((a, b) => b.winRate - a.winRate)[0]
-  const topStyle = [...course.runningStyleStats].sort((a, b) => b.winRate - a.winRate)[0]
-
-  const maxFrameWin = Math.max(...course.frameStats.map((f) => f.winRate))
-  const maxFramePlace = Math.max(...course.frameStats.map((f) => f.placeRate))
-  const maxStyleWin = Math.max(...course.runningStyleStats.map((s) => s.winRate))
-  const maxStylePlace = Math.max(...course.runningStyleStats.map((s) => s.placeRate))
+  const hasStats = course.frameStats !== undefined && course.runningStyleStats !== undefined
 
   return (
     <div className="rounded-lg border border-paddock-700 bg-paddock-900 p-5">
@@ -58,93 +150,19 @@ export function CourseTable({ course }: CourseTableProps) {
         <p className="mt-1 text-sm text-gold-400">🔑 {course.keyFactor}</p>
       </div>
 
-      <div className="mt-4 grid gap-4 md:grid-cols-2">
-        {/* 枠番成績 */}
-        <div>
-          <p className="mb-2 font-heading text-xs font-semibold uppercase tracking-wider text-gray-500">
-            枠番別勝率
-          </p>
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-xs text-gray-500">
-                <th className="pb-1 text-left">枠</th>
-                <th className="pb-1 text-right">勝率</th>
-                <th className="pb-1 text-right">複勝率</th>
-              </tr>
-            </thead>
-            <tbody>
-              {course.frameStats.map((f) => {
-                const isTop = f.frame === topFrame.frame
-                return (
-                  <tr
-                    key={f.frame}
-                    className={isTop ? 'font-semibold' : 'text-gray-300'}
-                  >
-                    <td className={`py-0.5 ${isTop ? 'text-gold-400' : ''}`}>
-                      {f.frame}枠
-                    </td>
-                    <RateCell
-                      rate={f.winRate}
-                      maxRate={maxFrameWin}
-                      barColor="var(--color-gold-600)"
-                      isTop={isTop}
-                    />
-                    <RateCell
-                      rate={f.placeRate}
-                      maxRate={maxFramePlace}
-                      barColor="var(--color-turf-600)"
-                      isTop={isTop}
-                    />
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+      {hasStats ? (
+        <div className="mt-4 grid gap-4 md:grid-cols-2">
+          <FrameStatsTable frameStats={course.frameStats!} />
+          <StyleStatsTable runningStyleStats={course.runningStyleStats!} />
         </div>
-
-        {/* 脚質成績 */}
-        <div>
-          <p className="mb-2 font-heading text-xs font-semibold uppercase tracking-wider text-gray-500">
-            脚質別勝率
+      ) : (
+        /* 統計データ準備中カード */
+        <div className="mt-4 rounded-lg border border-paddock-700 bg-paddock-800 px-4 py-5 text-center">
+          <p className="text-sm text-muted-foreground">
+            📊 枠番・脚質の実データ準備中 — JRA-VANデータ投入後に自動反映されます
           </p>
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-xs text-gray-500">
-                <th className="pb-1 text-left">脚質</th>
-                <th className="pb-1 text-right">勝率</th>
-                <th className="pb-1 text-right">複勝率</th>
-              </tr>
-            </thead>
-            <tbody>
-              {course.runningStyleStats.map((s) => {
-                const isTop = s.style === topStyle.style
-                return (
-                  <tr
-                    key={s.style}
-                    className={isTop ? 'font-semibold' : 'text-gray-300'}
-                  >
-                    <td className={`py-0.5 ${isTop ? 'text-gold-400' : ''}`}>
-                      {s.style}
-                    </td>
-                    <RateCell
-                      rate={s.winRate}
-                      maxRate={maxStyleWin}
-                      barColor="var(--color-gold-600)"
-                      isTop={isTop}
-                    />
-                    <RateCell
-                      rate={s.placeRate}
-                      maxRate={maxStylePlace}
-                      barColor="var(--color-turf-600)"
-                      isTop={isTop}
-                    />
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
         </div>
-      </div>
+      )}
 
       <p className="mt-3 text-xs text-gray-500">{course.note}</p>
     </div>

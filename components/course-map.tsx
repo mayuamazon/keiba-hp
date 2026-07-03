@@ -146,7 +146,7 @@ function RunnerDot({
 // ─── CourseMap（メイン） ─────────────────────────────────────────
 interface CourseMapProps {
   geometry: CourseGeometry
-  styleStats: RunningStyleStat[]
+  styleStats?: RunningStyleStat[]
 }
 
 export function CourseMap({ geometry, styleStats }: CourseMapProps) {
@@ -166,9 +166,11 @@ export function CourseMap({ geometry, styleStats }: CourseMapProps) {
     return [parts[2] ?? 1000, parts[3] ?? 620]
   }, [geometry.viewBox])
 
-  // 勝率1位の脚質
+  // 勝率1位の脚質（統計がない場合は undefined）
   const topStyle = useMemo(
-    () => [...styleStats].sort((a, b) => b.winRate - a.winRate)[0],
+    () => styleStats && styleStats.length > 0
+      ? [...styleStats].sort((a, b) => b.winRate - a.winRate)[0]
+      : undefined,
     [styleStats],
   )
 
@@ -424,8 +426,8 @@ export function CourseMap({ geometry, styleStats }: CourseMapProps) {
       {/* ─── 脚質凡例 ─── */}
       <div className="grid grid-cols-2 gap-2 p-4 pt-2 sm:grid-cols-4">
         {RUNNERS.map((runner) => {
-          const stat    = styleStats.find((s) => s.style === runner.style)
-          const isTop   = stat?.style === topStyle?.style
+          const stat  = styleStats?.find((s) => s.style === runner.style)
+          const isTop = stat !== undefined && topStyle !== undefined && stat.style === topStyle.style
           return (
             <div
               key={runner.style}
@@ -457,24 +459,30 @@ export function CourseMap({ geometry, styleStats }: CourseMapProps) {
                   </span>
                 )}
               </div>
-              {stat ? (
-                <>
-                  <p className="mt-1 text-lg font-bold num-data">
-                    <CountUp
-                      value={stat.winRate}
-                      decimals={1}
-                      suffix="%"
-                    />
-                  </p>
-                  <p className="text-xs text-muted-foreground">勝率</p>
-                </>
-              ) : (
-                <p className="mt-1 text-sm text-muted-foreground">—</p>
-              )}
+              {styleStats ? (
+                stat ? (
+                  <>
+                    <p className="mt-1 text-lg font-bold num-data">
+                      <CountUp
+                        value={stat.winRate}
+                        decimals={1}
+                        suffix="%"
+                      />
+                    </p>
+                    <p className="text-xs text-muted-foreground">勝率</p>
+                  </>
+                ) : (
+                  <p className="mt-1 text-sm text-muted-foreground">—</p>
+                )
+              ) : null}
             </div>
           )
         })}
       </div>
+      {/* 統計なし時は小さく注記を添える */}
+      {!styleStats && (
+        <p className="px-4 pb-3 text-xs text-muted-foreground">勝率データ準備中</p>
+      )}
     </div>
   )
 }
