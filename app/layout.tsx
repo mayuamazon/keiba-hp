@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Inter, Noto_Sans_JP, Zen_Old_Mincho } from 'next/font/google'
 import './globals.css'
+import { Analytics } from '@vercel/analytics/next'
 import { Nav } from '@/components/nav'
 import { Footer } from '@/components/footer'
 import { Providers } from './providers'
@@ -17,6 +18,7 @@ const zenOldMincho = Zen_Old_Mincho({
 })
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://keiba-hp.vercel.app'),
   title: '馬券ファクト | データで読む競馬予想',
   description: '調教・騎手コメント・コース傾向を徹底分析。論理的な買い目予想を毎週公開。',
   openGraph: {
@@ -42,6 +44,7 @@ export default function RootLayout({
           <main className="min-h-screen">{children}</main>
           <Footer />
         </Providers>
+        <Analytics />
       </body>
     </html>
   )

@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
+import { track as trackEvent } from '@vercel/analytics'
 import { tracks } from '@/lib/data/courses'
 import {
   MEETING_PHASES,
@@ -59,6 +60,16 @@ export function CourseFinder() {
   const [phase, setPhase] = useState<MeetingPhase>('early')
   const [tab, setTab] = useState<ResultTab>('frame')
 
+  // 検索条件の利用計測（初期表示はカウントせず、ユーザー操作による変更のみ送信）
+  const isInitialSearch = useRef(true)
+  useEffect(() => {
+    if (isInitialSearch.current) {
+      isInitialSearch.current = false
+      return
+    }
+    trackEvent('finder_search', { track, surface, distance, phase })
+  }, [track, surface, distance, phase])
+
   // 選択中トラックの距離候補（動的）
   const availableDistances = useMemo(() => {
     const trackInfo = tracks.find((t) => t.id === track)
@@ -95,15 +106,20 @@ export function CourseFinder() {
   }
 
   // 結果データ
-  const frameFavorability = useMemo(
+  const frameFavorabilityResult = useMemo(
     () => getFrameFavorability(track, surface, distance, phase),
     [track, surface, distance, phase],
   )
+  const frameFavorability = frameFavorabilityResult.items
 
-  const styleFavorability = useMemo(
+  const styleFavorabilityResult = useMemo(
     () => getStyleFavorability(track, surface, distance, phase),
     [track, surface, distance, phase],
   )
+  const styleFavorability = styleFavorabilityResult.items
+
+  // 枠順・脚質いずれか一方でも実データなら実データバッジを表示
+  const isRealData = frameFavorabilityResult.isRealData || styleFavorabilityResult.isRealData
 
   const bugAlerts = useMemo(
     () => getBugAlerts(track, surface, distance, phase),
@@ -331,6 +347,18 @@ export function CourseFinder() {
             <span style={{ color: 'var(--color-foreground)' }}>
               現在の条件：{trackName} {surfaceName}{distance}m（{phaseInfo.label}）
             </span>{' '}
+            {isRealData && (
+              <span
+                className="inline-block rounded px-1 py-0.5 text-[9px] font-bold leading-none align-middle"
+                style={{
+                  background: 'color-mix(in oklab, var(--color-gold-500) 20%, transparent)',
+                  color: 'var(--color-gold-400)',
+                  border: '1px solid var(--color-gold-600)',
+                }}
+              >
+                実データ
+              </span>
+            )}{' '}
             <span>{phaseInfo.sub}</span>
           </p>
 

@@ -20,6 +20,7 @@ const VALID_TRACKS = new Set([
 ])
 const VALID_SURFACES = new Set(['turf', 'dirt'])
 const VALID_STYLES = new Set(['逃げ', '先行', '差し', '追込'])
+const VALID_PHASES = new Set(['early', 'late', 'all'])
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -63,12 +64,24 @@ function parseCSV(filePath) {
   return rows
 }
 
+// ─── phase 値の正規化（列なし・空 → 'all'） ──────────
+function normalizePhase(rawPhase, warn) {
+  if (!rawPhase || rawPhase.trim() === '' || rawPhase === undefined) return 'all'
+  const p = rawPhase.trim()
+  if (!VALID_PHASES.has(p)) {
+    warn(`不正な phase "${p}"（early / late / all のみ有効）`)
+    return null // null = 行スキップ
+  }
+  return p
+}
+
 // ─── バリデーション：frame_stats ──────────────────────
 function validateFrameRows(rows) {
   const valid = []
   let warnCount = 0
   for (const row of rows) {
     const { track_id, surface, distance, frame, win_rate, place_rate, __lineNo } = row
+    const rawPhase = row['phase']
     const warn = (msg) => {
       console.warn(`[WARN] frame_stats.csv 行${__lineNo}: ${msg} → スキップ`)
       warnCount++
@@ -85,7 +98,10 @@ function validateFrameRows(rows) {
     if (isNaN(wr) || wr < 0 || wr > 100) { warn(`win_rate が範囲外 "${win_rate}"`); continue }
     if (isNaN(pr) || pr < 0 || pr > 100) { warn(`place_rate が範囲外 "${place_rate}"`); continue }
 
-    valid.push({ track_id, surface, distance: dist, frame: fr, win_rate: wr, place_rate: pr })
+    const phase = normalizePhase(rawPhase, (msg) => { warn(msg); warnCount++ })
+    if (phase === null) continue
+
+    valid.push({ track_id, surface, distance: dist, frame: fr, win_rate: wr, place_rate: pr, phase })
   }
   return { valid, warnCount }
 }
@@ -96,6 +112,7 @@ function validateStyleRows(rows) {
   let warnCount = 0
   for (const row of rows) {
     const { track_id, surface, distance, style, win_rate, place_rate, __lineNo } = row
+    const rawPhase = row['phase']
     const warn = (msg) => {
       console.warn(`[WARN] style_stats.csv 行${__lineNo}: ${msg} → スキップ`)
       warnCount++
@@ -111,15 +128,24 @@ function validateStyleRows(rows) {
     if (isNaN(wr) || wr < 0 || wr > 100) { warn(`win_rate が範囲外 "${win_rate}"`); continue }
     if (isNaN(pr) || pr < 0 || pr > 100) { warn(`place_rate が範囲外 "${place_rate}"`); continue }
 
-    valid.push({ track_id, surface, distance: dist, style, win_rate: wr, place_rate: pr })
+    const phase = normalizePhase(rawPhase, (msg) => { warn(msg); warnCount++ })
+    if (phase === null) continue
+
+    valid.push({ track_id, surface, distance: dist, style, win_rate: wr, place_rate: pr, phase })
   }
   return { valid, warnCount }
 }
 
-// ─── 整合性チェック（両方揃っているキーのみ通す） ───────
+// ─── フルキー生成（phase を含む） ────────────────────
+function makeFullKey(r) {
+  const base = `${r.track_id}-${r.surface}-${r.distance}`
+  return r.phase === 'all' ? base : `${base}-${r.phase}`
+}
+
+// ─── 整合性チェック（フルキー単位で両方揃っているか） ─
 function mergeAndCheck(frameValid, styleValid) {
-  const frameKeys = new Set(frameValid.map(r => `${r.track_id}-${r.surface}-${r.distance}`))
-  const styleKeys = new Set(styleValid.map(r => `${r.track_id}-${r.surface}-${r.distance}`))
+  const frameKeys = new Set(frameValid.map(makeFullKey))
+  const styleKeys = new Set(styleValid.map(makeFullKey))
 
   // frameのみのキー
   const frameOnly = [...frameKeys].filter(k => !styleKeys.has(k))
@@ -135,24 +161,24 @@ function mergeAndCheck(frameValid, styleValid) {
     if (styleOnly.length > 0) {
       console.error('  style_stats にのみ存在: ' + styleOnly.join(', '))
     }
-    console.error('→ 両ファイルに同じ「競馬場×芝/ダ×距離」が揃っているか確認してください。')
+    console.error('→ 両ファイルに同じ「競馬場×芝/ダ×距離×phase」が揃っているか確認してください。')
     process.exit(1)
   }
 
-  return [...frameKeys]
+  return [...frameKeys].sort()
 }
 
 // ─── TypeScript ソース生成 ─────────────────────────────
 function buildTS(frameValid, styleValid, source, period) {
-  // キーごとにデータをグループ化
+  // フルキーごとにデータをグループ化
   const grouped = {}
   for (const r of frameValid) {
-    const key = `${r.track_id}-${r.surface}-${r.distance}`
+    const key = makeFullKey(r)
     if (!grouped[key]) grouped[key] = { frameStats: [], runningStyleStats: [] }
     grouped[key].frameStats.push({ frame: r.frame, winRate: r.win_rate, placeRate: r.place_rate })
   }
   for (const r of styleValid) {
-    const key = `${r.track_id}-${r.surface}-${r.distance}`
+    const key = makeFullKey(r)
     if (!grouped[key]) grouped[key] = { frameStats: [], runningStyleStats: [] }
     grouped[key].runningStyleStats.push({ style: r.style, winRate: r.win_rate, placeRate: r.place_rate })
   }
@@ -187,6 +213,8 @@ function buildTS(frameValid, styleValid, source, period) {
 // generated: ${now}
 import type { FrameStat, RunningStyleStat } from '@/lib/types'
 
+export type StatsPhase = 'early' | 'late' | 'all'
+
 export interface CourseStats {
   frameStats: FrameStat[]
   runningStyleStats: RunningStyleStat[]
@@ -194,13 +222,34 @@ export interface CourseStats {
   period?: string
 }
 
-// キー: \`\${trackId}-\${surface}-\${distance}\` 例 'tokyo-turf-2400'
+/**
+ * キー体系：
+ *   開催全体（all）: \`\${trackId}-\${surface}-\${distance}\`          例 'tokyo-turf-2400'
+ *   開幕前半（early）: \`\${trackId}-\${surface}-\${distance}-early\`  例 'tokyo-turf-2400-early'
+ *   開催後半（late）:  \`\${trackId}-\${surface}-\${distance}-late\`   例 'tokyo-turf-2400-late'
+ */
 export const courseStats: Record<string, CourseStats> = {
 ${entries},
 }
 
-export function getCourseStats(trackId: string, surface: string, distance: number): CourseStats | undefined {
-  return courseStats[\`\${trackId}-\${surface}-\${distance}\`]
+/**
+ * コース統計を取得する。
+ * phase を指定した場合：phase 別キーを優先して返し、該当キーが存在しなければ開催全体キーにフォールバックする。
+ * phase を省略した場合（または 'all'）：従来の開催全体キーのみを参照する。
+ * 既存呼び出し（phase 無し）の挙動は不変。
+ */
+export function getCourseStats(
+  trackId: string,
+  surface: string,
+  distance: number,
+  phase?: 'early' | 'late',
+): CourseStats | undefined {
+  const baseKey = \`\${trackId}-\${surface}-\${distance}\`
+  if (phase) {
+    const phaseKey = \`\${baseKey}-\${phase}\`
+    return courseStats[phaseKey] ?? courseStats[baseKey]
+  }
+  return courseStats[baseKey]
 }
 `
 }

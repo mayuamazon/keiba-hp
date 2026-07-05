@@ -1,5 +1,9 @@
-track_id,surface,distance,style,win_rate,place_rate
-tokyo,turf,2400,逃げ,8.4,25.2
-tokyo,turf,2400,先行,14.1,36.8
-tokyo,turf,2400,差し,18.3,42.1
-tokyo,turf,2400,追込,9.2,28.4
+track_id,surface,distance,style,win_rate,place_rate,phase
+tokyo,turf,2400,逃げ,8.4,25.2,all
+tokyo,turf,2400,先行,14.1,36.8,all
+tokyo,turf,2400,差し,18.3,42.1,all
+tokyo,turf,2400,追込,9.2,28.4,all
+tokyo,turf,2400,逃げ,12.1,30.5,early
+tokyo,turf,2400,先行,16.8,39.2,early
+tokyo,turf,2400,差し,14.4,38.0,early
+tokyo,turf,2400,追込,6.7,22.3,early

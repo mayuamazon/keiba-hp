@@ -5,6 +5,7 @@
  */
 
 import type { Track, Surface } from '@/lib/types'
+import { courseStats } from '@/lib/data/course-stats'
 
 // ─── 開催時期フェーズ ──────────────────────────────────────────────
 
@@ -19,29 +20,70 @@ export const MEETING_PHASES: Record<MeetingPhase, { label: string; sub: string }
 
 export type FavorabilityLevel = -2 | -1 | 0 | 1 | 2
 
+/**
+ * 勝率の配列を有利度レベルの配列に変換する（テスト可能にexport）。
+ * 平均との差（パーセントポイント）で判定:
+ *   diff >= +3  → 2
+ *   diff >= +1  → 1
+ *   diff <= -3  → -2
+ *   diff <= -1  → -1
+ *   それ以外   → 0
+ */
+export function mapRatesToLevels(stats: { winRate: number }[]): (-2 | -1 | 0 | 1 | 2)[] {
+  if (stats.length === 0) return []
+  const avg = stats.reduce((sum, s) => sum + s.winRate, 0) / stats.length
+  return stats.map((s) => {
+    const diff = s.winRate - avg
+    if (diff >= 3) return 2
+    if (diff >= 1) return 1
+    if (diff <= -3) return -2
+    if (diff <= -1) return -1
+    return 0
+  })
+}
+
 export interface FrameFavorability {
   frame: number
   level: FavorabilityLevel
 }
 
+export interface FrameFavorabilityResult {
+  items: FrameFavorability[]
+  isRealData: boolean
+}
+
 /**
  * 枠順の有利度を返す。
+ * phase 別の実データ（course-stats）が存在する場合はそれを使い、
+ * isRealData=true を返す。実データがない場合はモック補正ロジックを使う。
+ *
  * early: 1〜3枠に+補正、7〜8枠に−補正
  * late:  逆（外枠・差し優勢）
- *
- * モック実装。JRA-VANデータ投入後に実ロジックへ差し替え
  */
 export function getFrameFavorability(
   trackId: Track,
   surface: Surface,
   distance: number,
   phase: MeetingPhase,
-): FrameFavorability[] {
-  // ベースレベル（実データがあれば course-stats を参照）
-  // 現状はフラット 0 からスタートして phase 補正を乗せる
+): FrameFavorabilityResult {
+  // phase 別の実データを確認（phaseKeyが直接存在するときのみ実データ扱い。フォールバックはモックとみなす）
+  const phaseKey = `${trackId}-${surface}-${distance}-${phase}`
+  const hasPhaseData = phaseKey in courseStats
+  const stats = hasPhaseData ? courseStats[phaseKey] : undefined
+
+  if (hasPhaseData && stats && stats.frameStats.length > 0) {
+    const levels = mapRatesToLevels(stats.frameStats)
+    const items: FrameFavorability[] = stats.frameStats.map((f, i) => ({
+      frame: f.frame,
+      level: levels[i] ?? 0,
+    }))
+    return { items, isRealData: true }
+  }
+
+  // モック補正ロジック（フォールバック）
   const BASE: FavorabilityLevel[] = [0, 0, 0, 0, 0, 0, 0, 0]
 
-  const result: FrameFavorability[] = BASE.map((base, i) => {
+  const items: FrameFavorability[] = BASE.map((base, i) => {
     const frame = i + 1 // 1〜8
     let level: number = base
 
@@ -62,12 +104,7 @@ export function getFrameFavorability(
     return { frame, level: Math.max(-2, Math.min(2, level)) as FavorabilityLevel }
   })
 
-  // trackId / surface / distance は将来の実データ差し替えで使用
-  void trackId
-  void surface
-  void distance
-
-  return result
+  return { items, isRealData: false }
 }
 
 // ─── 脚質有利度 ──────────────────────────────────────────────────
@@ -79,27 +116,43 @@ export interface StyleFavorability {
   level: FavorabilityLevel
 }
 
+export interface StyleFavorabilityResult {
+  items: StyleFavorability[]
+  isRealData: boolean
+}
+
 /**
  * 脚質の有利度を返す。
+ * phase 別の実データ（course-stats）が存在する場合はそれを使い、
+ * isRealData=true を返す。実データがない場合はモック補正ロジックを使う。
+ *
  * early: 逃げ・先行+、差し・追込−
  * late:  逆（外・差し優勢）
- *
- * モック実装。JRA-VANデータ投入後に実ロジックへ差し替え
  */
 export function getStyleFavorability(
   trackId: Track,
   surface: Surface,
   distance: number,
   phase: MeetingPhase,
-): StyleFavorability[] {
-  // trackId / surface / distance は将来の実データ差し替えで使用
-  void trackId
-  void surface
-  void distance
+): StyleFavorabilityResult {
+  // phase 別の実データを確認（phaseKeyが直接存在するときのみ実データ扱い。フォールバックはモックとみなす）
+  const phaseKey = `${trackId}-${surface}-${distance}-${phase}`
+  const hasPhaseData = phaseKey in courseStats
+  const stats = hasPhaseData ? courseStats[phaseKey] : undefined
 
+  if (hasPhaseData && stats && stats.runningStyleStats.length > 0) {
+    const levels = mapRatesToLevels(stats.runningStyleStats)
+    const items: StyleFavorability[] = stats.runningStyleStats.map((s, i) => ({
+      style: s.style as RunningStyleName,
+      level: levels[i] ?? 0,
+    }))
+    return { items, isRealData: true }
+  }
+
+  // モック補正ロジック（フォールバック）
   const styles: RunningStyleName[] = ['逃げ', '先行', '差し', '追込']
 
-  return styles.map((style): StyleFavorability => {
+  const items: StyleFavorability[] = styles.map((style): StyleFavorability => {
     let level: number = 0
 
     if (phase === 'early') {
@@ -116,6 +169,8 @@ export function getStyleFavorability(
 
     return { style, level: level as FavorabilityLevel }
   })
+
+  return { items, isRealData: false }
 }
 
 // ─── バグ穴馬アラート ─────────────────────────────────────────────

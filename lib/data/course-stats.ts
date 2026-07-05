@@ -1,5 +1,7 @@
 import type { FrameStat, RunningStyleStat } from '@/lib/types'
 
+export type StatsPhase = 'early' | 'late' | 'all'
+
 export interface CourseStats {
   frameStats: FrameStat[]
   runningStyleStats: RunningStyleStat[]
@@ -7,7 +9,12 @@ export interface CourseStats {
   period?: string
 }
 
-/** キー: `${trackId}-${surface}-${distance}` 例 'tokyo-turf-2400' */
+/**
+ * キー体系：
+ *   開催全体（all）: `${trackId}-${surface}-${distance}`          例 'tokyo-turf-2400'
+ *   開幕前半（early）: `${trackId}-${surface}-${distance}-early`  例 'tokyo-turf-2400-early'
+ *   開催後半（late）:  `${trackId}-${surface}-${distance}-late`   例 'tokyo-turf-2400-late'
+ */
 export const courseStats: Record<string, CourseStats> = {
   'tokyo-turf-2400': {
     frameStats: [
@@ -87,10 +94,23 @@ export const courseStats: Record<string, CourseStats> = {
   },
 }
 
+/**
+ * コース統計を取得する。
+ * phase を指定した場合：phase 別キー（例 `tokyo-turf-2400-early`）を優先して返し、
+ * 該当キーが存在しなければ開催全体キー（例 `tokyo-turf-2400`）にフォールバックする。
+ * phase を省略した場合（または 'all'）：従来の開催全体キーのみを参照する。
+ * 既存呼び出し（phase 無し）の挙動は不変。
+ */
 export function getCourseStats(
   trackId: string,
   surface: string,
   distance: number,
+  phase?: 'early' | 'late',
 ): CourseStats | undefined {
-  return courseStats[`${trackId}-${surface}-${distance}`]
+  const baseKey = `${trackId}-${surface}-${distance}`
+  if (phase) {
+    const phaseKey = `${baseKey}-${phase}`
+    return courseStats[phaseKey] ?? courseStats[baseKey]
+  }
+  return courseStats[baseKey]
 }
