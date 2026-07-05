@@ -3,6 +3,7 @@ import { getAllReportMeta } from '@/lib/reports'
 import { ReportCard } from '@/components/report-card'
 import { Hero } from '@/components/hero'
 import { AccuracyBanner } from '@/components/accuracy-banner'
+import { CourseFinder } from '@/components/course-finder'
 import { GateReveal } from '@/components/motion/gate-reveal'
 import { HoverLift } from '@/components/motion/hover-lift'
 
@@ -34,11 +35,16 @@ export default async function HomePage() {
 
   return (
     <>
-      {/* ヒーロー：ゲート開放＋馬の疾走 */}
+      {/* ① 圧縮ヒーロー */}
       <Hero />
 
-      <div className="mx-auto max-w-6xl px-4 py-12">
-        {/* 実績バナー：CountUp アニメーション付き */}
+      <div className="mx-auto max-w-6xl px-4 py-4">
+        {/* ② CourseFinder（ファーストビュー内・即表示） */}
+        <CourseFinder />
+      </div>
+
+      <div className="mx-auto max-w-6xl px-4 py-8">
+        {/* ③ 実績バナー：CountUp アニメーション付き */}
         <GateReveal direction="up" delay={0.1}>
           <AccuracyBanner
             period="2026年上半期"
@@ -48,7 +54,7 @@ export default async function HomePage() {
           />
         </GateReveal>
 
-        {/* 最新レポート */}
+        {/* ④ 最新レポート */}
         {latest && (
           <section className="mt-16">
             <GateReveal direction="up" delay={0}>
@@ -64,7 +70,7 @@ export default async function HomePage() {
           </section>
         )}
 
-        {/* 過去のレポート */}
+        {/* ⑤ 過去のレポート */}
         {recent.length > 1 && (
           <section className="mt-12">
             <GateReveal direction="up" delay={0}>
@@ -88,7 +94,7 @@ export default async function HomePage() {
           </section>
         )}
 
-        {/* サイト特徴 3 カード */}
+        {/* ⑥ サイト特徴 3 カード */}
         <section className="mt-16 grid gap-4 md:grid-cols-3">
           {FEATURES.map(({ icon: Icon, title, desc, direction }, i) => (
             <GateReveal key={title} direction={direction} delay={i * 0.1}>

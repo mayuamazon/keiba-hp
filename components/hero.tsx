@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import Link from 'next/link'
 import { motion, useAnimation, useReducedMotion, useScroll, useTransform } from 'framer-motion'
 import { HorseSilhouette } from '@/components/horse-silhouette'
 
@@ -79,7 +78,7 @@ export function Hero() {
     <section
       ref={heroRef}
       className="relative w-full overflow-hidden"
-      style={{ minHeight: '70vh' }}
+      style={{ minHeight: '35vh' }}
     >
       {/* ── 背景グラデーション（パララックス） ── */}
       <motion.div
@@ -99,7 +98,7 @@ export function Hero() {
       {/* ── ターフの地平線（芝色の透過グラデーション帯） ── */}
       <motion.div
         className="absolute bottom-0 left-0 right-0 pointer-events-none"
-        style={{ height: '8rem', y: turfY }}
+        style={{ height: '5rem', y: turfY }}
         aria-hidden="true"
       >
         <div
@@ -115,7 +114,7 @@ export function Hero() {
       <div
         className="absolute left-0 right-0 pointer-events-none"
         style={{
-          bottom: '5rem',
+          bottom: '2.5rem',
           height: '1px',
           background:
             'linear-gradient(to right, transparent 0%, var(--color-gold-600) 20%, var(--color-gold-400) 50%, var(--color-gold-600) 80%, transparent 100%)',
@@ -127,14 +126,14 @@ export function Hero() {
       {!shouldReduceMotion && (
         <div
           className="absolute left-0 right-0 pointer-events-none"
-          style={{ bottom: '3.5rem', height: '140px' }}
+          style={{ bottom: '1.5rem', height: '80px' }}
           aria-hidden="true"
         >
           <motion.div
             animate={horseControls}
             initial={{ x: '-15vw' }}
             className="absolute bottom-0"
-            style={{ width: 240 }}
+            style={{ width: 160 }}
           >
             {/* スピードライン（馬の後方＝左側） */}
             {SPEED_LINES.map((line, i) => (
@@ -143,7 +142,7 @@ export function Hero() {
                 className="absolute"
                 style={{
                   right: '100%',
-                  top: line.top,
+                  top: Math.round(line.top * 0.6),
                   width: line.width,
                   height: 2,
                   background:
@@ -162,7 +161,7 @@ export function Hero() {
                 key={i}
                 className="absolute rounded-full"
                 style={{
-                  left: spec.left,
+                  left: Math.round(spec.left * 0.65),
                   bottom: 4,
                   width: spec.size,
                   height: spec.size,
@@ -191,8 +190,8 @@ export function Hero() {
                 position: 'absolute',
                 bottom: 0,
                 left: 0,
-                width: 240,
-                height: 128,
+                width: 160,
+                height: 86,
                 color: 'var(--color-gold-400)',
                 filter:
                   'drop-shadow(0 0 10px color-mix(in oklab, var(--color-gold-600) 55%, transparent))',
@@ -205,10 +204,10 @@ export function Hero() {
       {/* ── メインコンテンツ ── */}
       <div
         className="relative z-10 flex flex-col items-center justify-center text-center px-4"
-        style={{ minHeight: '70vh', paddingBottom: '9rem' }}
+        style={{ minHeight: '35vh', paddingBottom: '4rem' }}
       >
         {/* タイトル：左右のゲートが開くように「馬券」「ファクト」が飛び込む */}
-        <h1 className="flex flex-wrap items-end justify-center gap-x-2 font-heading text-5xl sm:text-6xl md:text-7xl">
+        <h1 className="flex flex-wrap items-end justify-center gap-x-2 font-heading text-4xl sm:text-5xl md:text-6xl">
           <motion.span
             initial={shouldReduceMotion ? false : { opacity: 0, x: -48 }}
             animate={{ opacity: 1, x: 0 }}
@@ -232,46 +231,22 @@ export function Hero() {
           initial={shouldReduceMotion ? false : { opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, ease: EASE_GATE, delay: 0.55 }}
-          className="mt-4 text-xl font-semibold"
+          className="mt-3 text-base font-semibold"
           style={{ color: 'var(--color-gold-300)' }}
         >
           調べ尽くして、論理で買う。
         </motion.p>
 
-        {/* 説明文 */}
+        {/* スクロールキュー */}
         <motion.p
-          initial={shouldReduceMotion ? false : { opacity: 0, y: 20 }}
+          initial={shouldReduceMotion ? false : { opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, ease: EASE_GATE, delay: 0.7 }}
-          className="mt-4 max-w-xl text-sm"
+          transition={{ duration: 0.7, ease: EASE_GATE, delay: 0.75 }}
+          className="mt-3 text-xs"
           style={{ color: 'var(--color-muted-foreground)' }}
         >
-          調教タイム・騎手コメント・コース傾向・ペース想定を全部拾って、
-          データで根拠を示す競馬予想サイト。毎週月〜火曜更新。
+          ↓ 3タップでコース傾向を検索
         </motion.p>
-
-        {/* CTA ボタン */}
-        <motion.div
-          initial={shouldReduceMotion ? false : { opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, ease: EASE_GATE, delay: 0.85 }}
-          className="mt-8 flex flex-wrap justify-center gap-3"
-        >
-          <a
-            href="https://note.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="rounded px-6 py-3 text-sm font-bold transition-colors bg-gold-500 text-paddock-950 hover:bg-gold-400"
-          >
-            買い目を見る（Note）
-          </a>
-          <Link
-            href="/report"
-            className="rounded px-6 py-3 text-sm font-semibold transition-colors border border-turf-500 text-turf-400 hover:bg-turf-600/20"
-          >
-            週次レポート →
-          </Link>
-        </motion.div>
       </div>
     </section>
   )
