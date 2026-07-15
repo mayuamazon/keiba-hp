@@ -13,15 +13,26 @@
        --style data/style_stats.csv --source "JRA-VAN 5年分全着順 自社集計" --period "2021-2026"
 """
 import os
+import re
 import sqlite3
 
 BASE = os.path.join(os.path.dirname(__file__), '..', '..')
 DB = os.path.join(BASE, 'data', 'jra_master_5y.sqlite')
 OUT_FRAME = os.path.join(BASE, 'data', 'frame_stats.csv')
 OUT_STYLE = os.path.join(BASE, 'data', 'style_stats.csv')
+COURSES_TS = os.path.join(BASE, 'lib', 'data', 'courses.ts')
 
-MIN_RACES = 30  # このレース数未満の（コース×phase）は出力しない
+MIN_RACES = 10  # このレース数未満の（コース×phase）は出力しない
 SURFACE_EN = {'芝': 'turf', 'ダ': 'dirt'}
+
+
+def curated_courses():
+    """courses.ts に手書き掲載済みのコース（閾値未満でも統計を強制出力する）"""
+    src = open(COURSES_TS, encoding='utf-8').read()
+    pat = re.compile(
+        r"trackId:\s*'(\w+)',\s*trackName:\s*'[^']*',\s*distance:\s*(\d+),\s*surface:\s*'(\w+)'",
+        re.S)
+    return {(t, s, int(d)) for t, d, s in pat.findall(src)}
 
 
 def main():
@@ -37,7 +48,13 @@ def main():
         race_counts[key + (phase,)] = races
         race_counts[key + ('all',)] = race_counts.get(key + ('all',), 0) + races
 
-    valid_keys = {k for k, n in race_counts.items() if n >= MIN_RACES}
+    curated = curated_courses()
+    # 閾値以上、または手書き掲載コース（こちらはphase別は出さず全体のみ＝少サンプルの
+    # early/late分割はノイズになるため）
+    valid_keys = {
+        k for k, n in race_counts.items()
+        if n >= MIN_RACES or (k[3] == 'all' and (k[0], k[1], k[2]) in curated)
+    }
 
     def stats_rows(group_col, valid_values=None):
         """(track,surface,dist,phase,group_val,win_rate,place_rate) を列挙"""

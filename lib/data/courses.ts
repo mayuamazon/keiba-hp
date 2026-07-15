@@ -1,5 +1,6 @@
 import type { CourseData, TrackInfo } from '@/lib/types'
 import { getCourseStats } from '@/lib/data/course-stats'
+import { generatedCourses } from '@/lib/data/courses-generated'
 
 /** 統計なしの生コースデータ（keyFactor / note のみの公知事実） */
 type BaseCourse = Omit<CourseData, 'frameStats' | 'runningStyleStats'>
@@ -341,6 +342,18 @@ const kokuraBase: TrackInfo = {
   ] as BaseCourse[]).map(withStats),
 }
 
+/** 手書きコースを優先し、courses-generated.ts の自動生成コースを補完する */
+function withGenerated(track: TrackInfo): TrackInfo {
+  const extra = generatedCourses
+    .filter(
+      (c) =>
+        c.trackId === track.id &&
+        !track.courses.some((e) => e.surface === c.surface && e.distance === c.distance),
+    )
+    .map(withStats)
+  return { ...track, courses: [...track.courses, ...extra] }
+}
+
 export const tracks: TrackInfo[] = [
   tokyoBase,
   nakayamaBase,
@@ -352,7 +365,7 @@ export const tracks: TrackInfo[] = [
   chukyoBase,
   kyotoBase,
   kokuraBase,
-]
+].map(withGenerated)
 
 export function getTrack(id: string): TrackInfo | undefined {
   return tracks.find((t) => t.id === id)
