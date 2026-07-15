@@ -39,3 +39,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# JRA-VANローカル分析データ（サイトに載せるのは lib/data/course-stats.ts のみ）
+/data/
+lib/data/course-stats.bak
