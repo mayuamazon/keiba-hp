@@ -95,12 +95,13 @@ describe('CourseFinder', () => {
     expect(matches.length).toBeGreaterThan(0)
   })
 
-  // ── 4. バグアラートに「サンプル」文言が含まれる ─────────────────
+  // ── 4. バグアラートが実測値ベースである ─────────────────────────
 
-  it('バグアラートに「サンプル」注記が含まれる', () => {
+  it('バグアラートに実測値の出典注記（または検出なしメッセージ）が表示される', () => {
     render(<CourseFinder />)
-    const sampleTexts = screen.getAllByText(/サンプル表示/)
-    expect(sampleTexts.length).toBeGreaterThan(0)
+    const notes = screen.queryAllByText(/バックテスト実測値/)
+    const empty = screen.queryAllByText(/バグパターンは検出されませんでした/)
+    expect(notes.length + empty.length).toBeGreaterThan(0)
   })
 
   it('バグアラートに JRA-VAN 言及が含まれる', () => {

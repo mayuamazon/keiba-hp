@@ -1,11 +1,13 @@
 /**
  * bug-finder.ts — コース傾向＆バグ穴馬検索のロジック層
  *
- * モック実装。JRA-VANデータ投入後に実ロジックへ差し替え
+ * 枠順・脚質・バグ穴馬アラートとも JRA-VAN 2021-2026 全着順データの実測値。
+ * （アラートは scripts/jravan/mine_bugs.py が生成）
  */
 
 import type { Track, Surface } from '@/lib/types'
 import { courseStats } from '@/lib/data/course-stats'
+import { minedBugAlerts } from '@/lib/data/bug-alerts-generated'
 
 // ─── 開催時期フェーズ ──────────────────────────────────────────────
 
@@ -182,91 +184,10 @@ export interface BugAlert {
   stat: string // 例: '複勝回収率 340%'
 }
 
-/** 競馬場日本語名マップ */
-const TRACK_NAMES: Record<Track, string> = {
-  tokyo: '東京',
-  nakayama: '中山',
-  hanshin: '阪神',
-  kyoto: '京都',
-  chukyo: '中京',
-  kokura: '小倉',
-  fukushima: '福島',
-  niigata: '新潟',
-  hakodate: '函館',
-  sapporo: '札幌',
-}
-
-const SURFACE_NAMES: Record<Surface, string> = {
-  turf: '芝',
-  dirt: 'ダート',
-}
-
 /**
- * アラートテンプレート（6種類以上）
- * モック実装。JRA-VANデータ投入後に実ロジックへ差し替え
- */
-type AlertTemplate = (
-  trackName: string,
-  surfaceName: string,
-  distance: number,
-  phaseLabel: string,
-) => BugAlert
-
-const ALERT_TEMPLATES: AlertTemplate[] = [
-  // 0: 血統×道悪
-  (trackName, surfaceName, distance, phaseLabel) => ({
-    severity: 'high',
-    title: '血統×道悪フィルタ',
-    body: `過去5年で「${phaseLabel}×道悪×キングカメハメハ血統」の${trackName}${surfaceName}${distance}mにおける複勝回収率は340%。該当する想定5番人気以下の穴馬を自動抽出します。`,
-    stat: '複勝回収率 340%',
-  }),
-  // 1: 外厩明け
-  (trackName, surfaceName, distance, phaseLabel) => ({
-    severity: 'high',
-    title: '外厩明け初戦フィルタ',
-    body: `${trackName}${surfaceName}${distance}m（${phaseLabel}）において、ノーザンファーム外厩明け初戦の単勝回収率が287%。近3走で着外でも仕上がり急上昇の可能性大。`,
-    stat: '単勝回収率 287%',
-  }),
-  // 2: 騎手乗替り
-  (trackName, surfaceName, distance, phaseLabel) => ({
-    severity: 'mid',
-    title: 'C→A級騎手乗替り',
-    body: `${phaseLabel}の${trackName}${surfaceName}${distance}mで「前走C級騎手→今走A級騎手」乗替りは複勝率44.8%・回収率218%。陣営の本気度シグナルとして注目。`,
-    stat: '複勝回収率 218%',
-  }),
-  // 3: 馬体重増減
-  (trackName, surfaceName, distance, phaseLabel) => ({
-    severity: 'mid',
-    title: '馬体重増加フィルタ',
-    body: `${trackName}${surfaceName}${distance}m（${phaseLabel}）で前走比+10kg以上増加馬（3歳以下）の単勝回収率は195%。成長途上の増加は仕上がりの証とデータが示す。`,
-    stat: '単勝回収率 195%',
-  }),
-  // 4: ローテーション
-  (trackName, surfaceName, distance, phaseLabel) => ({
-    severity: 'high',
-    title: '中14週以上ローテ',
-    body: `過去5年・${phaseLabel}の${trackName}${surfaceName}${distance}mで中14週以上の長期休養明けは複勝回収率312%。調教入念組かつ外厩活用馬に絞ると的中率52.3%。`,
-    stat: '複勝回収率 312%',
-  }),
-  // 5: 前走距離短縮
-  (trackName, surfaceName, distance, phaseLabel) => ({
-    severity: 'mid',
-    title: '前走距離短縮フィルタ',
-    body: `${phaseLabel}・${trackName}${surfaceName}${distance}mで前走比-400m以上の距離短縮馬の複勝回収率は241%。ハービンジャー産駒に特に顕著なパターン。`,
-    stat: '複勝回収率 241%',
-  }),
-  // 6: 斤量軽減
-  (trackName, surfaceName, distance, phaseLabel) => ({
-    severity: 'mid',
-    title: '斤量2kg以上軽減',
-    body: `${trackName}${surfaceName}${distance}m（${phaseLabel}）で前走比2kg以上の斤量軽減馬は単勝回収率229%。5番人気以外の馬に絞ると回収率はさらに上昇。`,
-    stat: '単勝回収率 229%',
-  }),
-]
-
-/**
- * 条件キーから決定的にテンプレートを選択し、バグアラートを返す。
- * モック実装。JRA-VANデータ投入後に実ロジックへ差し替え
+ * バグ穴馬アラートを返す（JRA-VAN 2021-2026 全着順のバックテスト実測値）。
+ * コース単位のアラートを優先し、無ければ場×馬場単位へフォールバック。
+ * どちらも無い場合は空配列（＝採用基準を満たすパターンが検出されなかったコース）。
  */
 export function getBugAlerts(
   trackId: Track,
@@ -274,28 +195,9 @@ export function getBugAlerts(
   distance: number,
   phase: MeetingPhase,
 ): BugAlert[] {
-  const trackName = TRACK_NAMES[trackId]
-  const surfaceName = SURFACE_NAMES[surface]
-  const phaseLabel = MEETING_PHASES[phase].label
-
-  // 決定的ハッシュ（同条件→同結果）
-  const key = `${trackId}-${surface}-${distance}-${phase}`
-  let hash = 0
-  for (let i = 0; i < key.length; i++) {
-    hash = (hash * 31 + key.charCodeAt(i)) >>> 0
-  }
-
-  // 1件目（highまたはmid）と2件目（midを優先）を選ぶ
-  const idx1 = hash % ALERT_TEMPLATES.length
-  const idx2 = (hash * 7 + 3) % ALERT_TEMPLATES.length
-  // 2件目が1件目と同じにならないよう調整
-  const safeIdx2 = idx2 === idx1 ? (idx2 + 1) % ALERT_TEMPLATES.length : idx2
-
-  const alert1 = ALERT_TEMPLATES[idx1](trackName, surfaceName, distance, phaseLabel)
-  const alert2 = ALERT_TEMPLATES[safeIdx2](trackName, surfaceName, distance, phaseLabel)
-
-  // 1件目を high に昇格（常に1件は high であること）
-  alert1.severity = 'high'
-
-  return [alert1, alert2]
+  return (
+    minedBugAlerts[`${trackId}-${surface}-${distance}-${phase}`] ??
+    minedBugAlerts[`${trackId}-${surface}-${phase}`] ??
+    []
+  )
 }

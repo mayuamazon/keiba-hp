@@ -188,6 +188,8 @@ def main():
                     parse_float_or_none(row[34]), parse_float_or_none(row[36]),
                     parse_float_or_none(row[37]),
                     int(row[39]) if row[39].strip().isdigit() else None,
+                    int(row[40]) if re.match(r'^[+-]?\d+$', row[40].strip()) else None,
+                    1 if row[41].strip() == 'B' else 0,
                     win_payout, win_odds, parse_payout_int(row[43]),
                     parse_payout_int(row[44]), parse_payout_int(row[45]),
                     parse_payout_int(row[46]), parse_payout_int(row[47]),
@@ -227,16 +229,17 @@ def main():
             time_sec REAL, margin REAL,
             corner2 INTEGER, corner3 INTEGER, corner4 INTEGER, style TEXT,
             last3f REAL, pci REAL, pci3 REAL, rpci REAL,
-            horse_weight INTEGER,
+            horse_weight INTEGER, weight_diff INTEGER, blinker INTEGER,
             win_payout INTEGER, win_odds REAL, place_payout INTEGER,
             wakuren INTEGER, umaren INTEGER, umatan INTEGER,
             sanrenpuku INTEGER, sanrentan INTEGER
         )
     ''')
     con.executemany(
-        f'INSERT INTO results VALUES ({",".join(["?"] * 45)})', rows_out)
+        f'INSERT INTO results VALUES ({",".join(["?"] * 47)})', rows_out)
     con.execute('CREATE INDEX idx_course ON results(track_id, surface, distance, phase)')
     con.execute('CREATE INDEX idx_date ON results(date)')
+    con.execute('CREATE INDEX idx_horse ON results(horse, date)')
     con.commit()
 
     # ── 検証 ──────────────────────────────────────────

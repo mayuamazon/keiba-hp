@@ -469,6 +469,18 @@ export function CourseFinder() {
 
           {/* ★ バグ穴馬アラート（常時表示・タブ外） */}
           <div className="mt-3 flex flex-col gap-2">
+            {bugAlerts.length === 0 && (
+              <p
+                className="rounded-lg p-3 text-[11px] leading-relaxed"
+                style={{
+                  border: '1px solid var(--color-gold-600)',
+                  background: 'var(--color-paddock-800)',
+                  color: 'var(--color-muted-foreground)',
+                }}
+              >
+                この条件では採用基準（対象30頭以上・回収率120%以上）を満たすバグパターンは検出されませんでした。過去5年の実測でオッズの歪みが小さいコースです。
+              </p>
+            )}
             {bugAlerts.map((alert, i) => (
               <div
                 key={i}
@@ -526,12 +538,12 @@ export function CourseFinder() {
                   {alert.stat}
                 </p>
 
-                {/* サンプル注記 */}
+                {/* データ出典注記 */}
                 <p
                   className="mt-1 text-[10px]"
                   style={{ color: 'var(--color-muted-foreground)' }}
                 >
-                  ※サンプル表示——JRA-VANデータ投入後、実データで自動抽出
+                  ※JRA-VAN 2021-2026全着順のバックテスト実測値。将来の成績を保証するものではありません
                 </p>
               </div>
             ))}
