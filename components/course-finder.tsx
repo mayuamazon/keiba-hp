@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo, useEffect, useRef } from 'react'
+import Link from 'next/link'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { track as trackEvent } from '@vercel/analytics'
 import { tracks } from '@/lib/data/courses'
@@ -31,6 +32,76 @@ const TRACK_CHIPS: TrackChip[] = [
 ]
 
 // ─── 有利度→色マッピング ──────────────────────────────────────────
+
+/** バーの塗り色（赤=有利 青=不利、レベル由来） */
+function levelToBarColor(level: number): string {
+  if (level >= 2) return 'color-mix(in oklab, var(--color-silks-red) 75%, transparent)'
+  if (level === 1) return 'color-mix(in oklab, var(--color-silks-red) 45%, transparent)'
+  if (level === -1) return 'color-mix(in oklab, var(--color-silks-blue) 45%, transparent)'
+  if (level <= -2) return 'color-mix(in oklab, var(--color-silks-blue) 70%, transparent)'
+  return 'color-mix(in oklab, var(--color-gold-600) 40%, transparent)'
+}
+
+/** 脚質カラー共通ルール（course-map と同じ） */
+const STYLE_COLORS: Record<string, string> = {
+  逃げ: 'var(--color-silks-red)',
+  先行: 'var(--color-silks-orange)',
+  差し: 'var(--color-silks-blue)',
+  追込: 'var(--color-silks-purple)',
+}
+
+/** 勝率・複勝率つきの横バー行（枠順・脚質タブ共通） */
+function StatBarRows({
+  ariaLabel,
+  rows,
+}: {
+  ariaLabel: string
+  rows: {
+    key: string
+    label: React.ReactNode
+    level: number
+    winRate?: number
+    placeRate?: number
+  }[]
+}) {
+  const maxPlace = Math.max(...rows.map((r) => r.placeRate ?? 0), 1)
+  return (
+    <div role="list" aria-label={ariaLabel} className="flex flex-col gap-1 mb-1.5">
+      {/* 列ヘッダ */}
+      <div className="flex items-center gap-2 text-[9px]" style={{ color: 'var(--color-muted-foreground)' }}>
+        <span className="w-9" />
+        <span className="flex-1" />
+        <span className="w-11 text-right">勝率</span>
+        <span className="w-11 text-right">複勝率</span>
+      </div>
+      {rows.map(({ key, label, level, winRate, placeRate }) => (
+        <div key={key} role="listitem" className="flex items-center gap-2">
+          <span className="w-9 shrink-0 text-xs font-bold" style={{ color: 'var(--color-zekken)' }}>
+            {label}
+          </span>
+          <div
+            className="h-3.5 flex-1 overflow-hidden rounded-sm"
+            style={{ background: 'var(--color-paddock-800)' }}
+          >
+            <div
+              className="h-full rounded-sm transition-[width] duration-500"
+              style={{
+                width: `${((placeRate ?? 0) / maxPlace) * 100}%`,
+                background: levelToBarColor(level),
+              }}
+            />
+          </div>
+          <span className="num-data w-11 shrink-0 text-right text-[11px]" style={{ color: 'var(--color-muted-foreground)' }}>
+            {winRate !== undefined ? `${winRate.toFixed(1)}%` : '—'}
+          </span>
+          <span className="num-data w-11 shrink-0 text-right text-[11px] font-bold" style={{ color: 'var(--color-gold-400)' }}>
+            {placeRate !== undefined ? `${placeRate.toFixed(1)}%` : '—'}
+          </span>
+        </div>
+      ))}
+    </div>
+  )
+}
 
 function levelToStyle(level: number): React.CSSProperties {
   if (level >= 2)
@@ -404,68 +475,107 @@ export function CourseFinder() {
             {tab === 'frame' ? (
               <motion.div key={`frame-${track}-${surface}-${distance}-${phase}`} {...motionProps}>
                 {/* 枠順タブ */}
-                <div
-                  className="grid mb-1"
-                  style={{ gridTemplateColumns: 'repeat(8, 1fr)', gap: '2px' }}
-                  role="list"
-                  aria-label="枠順有利度"
-                >
-                  {frameFavorability.map(({ frame, level }) => (
-                    <div
-                      key={frame}
-                      role="listitem"
-                      className="flex flex-col items-center rounded py-1.5"
-                      style={levelToStyle(level)}
-                    >
-                      <span
-                        className="text-xs font-bold"
-                        style={{ color: 'var(--color-zekken)' }}
+                {frameFavorabilityResult.isRealData ? (
+                  <StatBarRows
+                    ariaLabel="枠順有利度"
+                    rows={frameFavorability.map(({ frame, level, winRate, placeRate }) => ({
+                      key: String(frame),
+                      label: `${frame}枠`,
+                      level,
+                      winRate,
+                      placeRate,
+                    }))}
+                  />
+                ) : (
+                  <div
+                    className="grid mb-1"
+                    style={{ gridTemplateColumns: 'repeat(8, 1fr)', gap: '2px' }}
+                    role="list"
+                    aria-label="枠順有利度"
+                  >
+                    {frameFavorability.map(({ frame, level }) => (
+                      <div
+                        key={frame}
+                        role="listitem"
+                        className="flex flex-col items-center rounded py-1.5"
+                        style={levelToStyle(level)}
                       >
-                        {frame}
-                      </span>
-                      <span
-                        className="text-[9px] leading-tight mt-0.5"
-                        style={{ color: 'var(--color-muted-foreground)' }}
-                      >
-                        枠
-                      </span>
-                    </div>
-                  ))}
-                </div>
+                        <span
+                          className="text-xs font-bold"
+                          style={{ color: 'var(--color-zekken)' }}
+                        >
+                          {frame}
+                        </span>
+                        <span
+                          className="text-[9px] leading-tight mt-0.5"
+                          style={{ color: 'var(--color-muted-foreground)' }}
+                        >
+                          枠
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
                 <p className="text-[10px]" style={{ color: 'var(--color-muted-foreground)' }}>
-                  赤=有利　青=不利
+                  {frameFavorabilityResult.isRealData
+                    ? 'バーの長さ=複勝率　赤=有利　青=不利'
+                    : '赤=有利　青=不利'}
                 </p>
               </motion.div>
             ) : (
               <motion.div key={`style-${track}-${surface}-${distance}-${phase}`} {...motionProps}>
                 {/* 脚質タブ */}
-                <div
-                  className="flex gap-1.5 mb-1"
-                  role="list"
-                  aria-label="脚質有利度"
-                >
-                  {styleFavorability.map(({ style, level }) => (
-                    <div
-                      key={style}
-                      role="listitem"
-                      className="flex flex-1 flex-col items-center rounded py-1.5"
-                      style={levelToStyle(level)}
-                    >
-                      <span
-                        className="text-xs font-bold"
-                        style={{ color: 'var(--color-zekken)' }}
+                {styleFavorabilityResult.isRealData ? (
+                  <StatBarRows
+                    ariaLabel="脚質有利度"
+                    rows={styleFavorability.map(({ style, level, winRate, placeRate }) => ({
+                      key: style,
+                      label: <span style={{ color: STYLE_COLORS[style] }}>{style}</span>,
+                      level,
+                      winRate,
+                      placeRate,
+                    }))}
+                  />
+                ) : (
+                  <div
+                    className="flex gap-1.5 mb-1"
+                    role="list"
+                    aria-label="脚質有利度"
+                  >
+                    {styleFavorability.map(({ style, level }) => (
+                      <div
+                        key={style}
+                        role="listitem"
+                        className="flex flex-1 flex-col items-center rounded py-1.5"
+                        style={levelToStyle(level)}
                       >
-                        {style}
-                      </span>
-                    </div>
-                  ))}
-                </div>
+                        <span
+                          className="text-xs font-bold"
+                          style={{ color: 'var(--color-zekken)' }}
+                        >
+                          {style}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
                 <p className="text-[10px]" style={{ color: 'var(--color-muted-foreground)' }}>
-                  赤=有利　青=不利
+                  {styleFavorabilityResult.isRealData
+                    ? 'バーの長さ=複勝率　赤=有利　青=不利'
+                    : '赤=有利　青=不利'}
                 </p>
               </motion.div>
             )}
           </AnimatePresence>
+
+          {/* コース詳細ページへの導線 */}
+          <Link
+            href={`/courses/${track}`}
+            className="mt-2 inline-block text-[11px] underline underline-offset-2"
+            style={{ color: 'var(--color-gold-400)' }}
+          >
+            {trackName}競馬場のコース図・全距離データを見る →
+          </Link>
 
           {/* ★ バグ穴馬アラート（常時表示・タブ外） */}
           <div className="mt-3 flex flex-col gap-2">

@@ -47,6 +47,9 @@ export function mapRatesToLevels(stats: { winRate: number }[]): (-2 | -1 | 0 | 1
 export interface FrameFavorability {
   frame: number
   level: FavorabilityLevel
+  /** 実データがある場合のみ（%） */
+  winRate?: number
+  placeRate?: number
 }
 
 export interface FrameFavorabilityResult {
@@ -78,6 +81,8 @@ export function getFrameFavorability(
     const items: FrameFavorability[] = stats.frameStats.map((f, i) => ({
       frame: f.frame,
       level: levels[i] ?? 0,
+      winRate: f.winRate,
+      placeRate: f.placeRate,
     }))
     return { items, isRealData: true }
   }
@@ -116,6 +121,9 @@ export type RunningStyleName = '逃げ' | '先行' | '差し' | '追込'
 export interface StyleFavorability {
   style: RunningStyleName
   level: FavorabilityLevel
+  /** 実データがある場合のみ（%） */
+  winRate?: number
+  placeRate?: number
 }
 
 export interface StyleFavorabilityResult {
@@ -144,10 +152,15 @@ export function getStyleFavorability(
 
   if (hasPhaseData && stats && stats.runningStyleStats.length > 0) {
     const levels = mapRatesToLevels(stats.runningStyleStats)
-    const items: StyleFavorability[] = stats.runningStyleStats.map((s, i) => ({
-      style: s.style as RunningStyleName,
-      level: levels[i] ?? 0,
-    }))
+    const ORDER: RunningStyleName[] = ['逃げ', '先行', '差し', '追込']
+    const items: StyleFavorability[] = stats.runningStyleStats
+      .map((s, i) => ({
+        style: s.style as RunningStyleName,
+        level: levels[i] ?? 0,
+        winRate: s.winRate,
+        placeRate: s.placeRate,
+      }))
+      .sort((a, b) => ORDER.indexOf(a.style) - ORDER.indexOf(b.style))
     return { items, isRealData: true }
   }
 
