@@ -8,7 +8,12 @@ type BaseCourse = Omit<CourseData, 'frameStats' | 'runningStyleStats'>
 function withStats(base: BaseCourse): CourseData {
   const stats = getCourseStats(base.trackId, base.surface, base.distance)
   return stats
-    ? { ...base, frameStats: stats.frameStats, runningStyleStats: stats.runningStyleStats }
+    ? {
+        ...base,
+        frameStats: stats.frameStats,
+        runningStyleStats: stats.runningStyleStats,
+        races: stats.races,
+      }
     : base
 }
 

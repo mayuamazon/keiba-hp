@@ -101,7 +101,19 @@ function validateFrameRows(rows) {
     const phase = normalizePhase(rawPhase, (msg) => { warn(msg); warnCount++ })
     if (phase === null) continue
 
-    valid.push({ track_id, surface, distance: dist, frame: fr, win_rate: wr, place_rate: pr, phase })
+    // races 列（任意：無い・空なら undefined、正の整数のみ有効）
+    const rawRaces = row['races']
+    let races = undefined
+    if (rawRaces !== undefined && rawRaces !== '') {
+      const r = parseInt(rawRaces, 10)
+      if (isNaN(r) || r <= 0) {
+        warn(`races は正の整数である必要があります "${rawRaces}"`)
+        continue
+      }
+      races = r
+    }
+
+    valid.push({ track_id, surface, distance: dist, frame: fr, win_rate: wr, place_rate: pr, phase, races })
   }
   return { valid, warnCount }
 }
@@ -174,12 +186,16 @@ function buildTS(frameValid, styleValid, source, period) {
   const grouped = {}
   for (const r of frameValid) {
     const key = makeFullKey(r)
-    if (!grouped[key]) grouped[key] = { frameStats: [], runningStyleStats: [] }
+    if (!grouped[key]) grouped[key] = { frameStats: [], runningStyleStats: [], races: undefined }
     grouped[key].frameStats.push({ frame: r.frame, winRate: r.win_rate, placeRate: r.place_rate })
+    // races は frame 側の最初の値を採用（全行同じはず）
+    if (grouped[key].races === undefined && r.races !== undefined) {
+      grouped[key].races = r.races
+    }
   }
   for (const r of styleValid) {
     const key = makeFullKey(r)
-    if (!grouped[key]) grouped[key] = { frameStats: [], runningStyleStats: [] }
+    if (!grouped[key]) grouped[key] = { frameStats: [], runningStyleStats: [], races: undefined }
     grouped[key].runningStyleStats.push({ style: r.style, winRate: r.win_rate, placeRate: r.place_rate })
   }
 
@@ -201,9 +217,10 @@ function buildTS(frameValid, styleValid, source, period) {
       const rs = val.runningStyleStats
         .map(r => `      { style: '${r.style}', winRate: ${r.winRate.toFixed(1)}, placeRate: ${r.placeRate.toFixed(1)} }`)
         .join(',\n')
+      const racesLine = (val.races !== undefined) ? `\n    races: ${val.races},` : ''
       const srcLine = source ? `\n    source: '${sourceStr}',` : ''
       const perLine = period ? `\n    period: '${periodStr}',` : ''
-      return `  '${key}': {\n    frameStats: [\n${fs},\n    ],\n    runningStyleStats: [\n${rs},\n    ],${srcLine}${perLine}\n  }`
+      return `  '${key}': {\n    frameStats: [\n${fs},\n    ],\n    runningStyleStats: [\n${rs},\n    ],${racesLine}${srcLine}${perLine}\n  }`
     })
     .join(',\n')
 
@@ -218,6 +235,7 @@ export type StatsPhase = 'early' | 'late' | 'all'
 export interface CourseStats {
   frameStats: FrameStat[]
   runningStyleStats: RunningStyleStat[]
+  races?: number
   source?: string
   period?: string
 }

@@ -164,6 +164,11 @@ export function CourseTable({ course }: CourseTableProps) {
         </div>
       )}
 
+      {course.races !== undefined && (
+        <p className="mt-1 text-[11px]" style={{ color: 'var(--color-muted-foreground)' }}>
+          JRA-VAN 2021-2026・{course.races}レース集計
+        </p>
+      )}
       <p className="mt-3 text-xs text-gray-500">{course.note}</p>
     </div>
   )

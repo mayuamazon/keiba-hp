@@ -26,6 +26,7 @@ export interface CourseData {
   surface: Surface
   frameStats?: FrameStat[]
   runningStyleStats?: RunningStyleStat[]
+  races?: number
   keyFactor: string
   note: string
 }

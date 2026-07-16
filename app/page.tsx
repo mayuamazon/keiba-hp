@@ -46,11 +46,12 @@ export default async function HomePage() {
       <div className="mx-auto max-w-6xl px-4 py-8">
         {/* ③ 実績バナー：CountUp アニメーション付き */}
         <GateReveal direction="up" delay={0.1}>
+          {/* 実績値は的中結果の実測のみ入力する（0のままなら準備中表示） */}
           <AccuracyBanner
             period="2026年上半期"
-            totalRaces={24}
-            hits={17}
-            avgRoi={128}
+            totalRaces={0}
+            hits={0}
+            avgRoi={0}
           />
         </GateReveal>
 

@@ -57,7 +57,7 @@ def main():
     }
 
     def stats_rows(group_col, valid_values=None):
-        """(track,surface,dist,phase,group_val,win_rate,place_rate) を列挙"""
+        """(track,surface,dist,phase,group_val,win_rate,place_rate,races) を列挙"""
         rows = []
         for phase_filter in ('early', 'late', 'all'):
             cond = '' if phase_filter == 'all' else f"AND phase='{phase_filter}'"
@@ -76,7 +76,8 @@ def main():
                     continue
                 if valid_values and gv not in valid_values:
                     continue
-                rows.append((tid, SURFACE_EN[sf], dist, gv, wr, pr, phase_filter))
+                races = race_counts.get(key, 0)
+                rows.append((tid, SURFACE_EN[sf], dist, gv, wr, pr, phase_filter, races))
         return rows
 
     frame_rows = stats_rows('frame')
@@ -90,11 +91,11 @@ def main():
     style_rows = [r for r in style_rows if (r[0], r[1], r[2], r[6]) in common]
 
     with open(OUT_FRAME, 'w', encoding='utf-8') as f:
-        f.write('track_id,surface,distance,frame,win_rate,place_rate,phase\n')
+        f.write('track_id,surface,distance,frame,win_rate,place_rate,phase,races\n')
         for r in sorted(frame_rows):
             f.write(','.join(map(str, r)) + '\n')
     with open(OUT_STYLE, 'w', encoding='utf-8') as f:
-        f.write('track_id,surface,distance,style,win_rate,place_rate,phase\n')
+        f.write('track_id,surface,distance,style,win_rate,place_rate,phase,races\n')
         for r in sorted(style_rows):
             f.write(','.join(map(str, r)) + '\n')
 

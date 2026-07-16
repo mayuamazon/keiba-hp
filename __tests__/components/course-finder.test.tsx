@@ -149,4 +149,31 @@ describe('CourseFinder', () => {
     const matches = screen.getAllByText(/2400m/)
     expect(matches.length).toBeGreaterThan(0)
   })
+
+  // ── 7. 比較モード ────────────────────────────────────────────────
+
+  it('前後半比較ボタンが存在する', () => {
+    render(<CourseFinder />)
+    expect(screen.getByRole('button', { name: /前後半比較/ })).toBeInTheDocument()
+  })
+
+  it('前後半比較ボタンをクリックすると aria-pressed が true になる', () => {
+    render(<CourseFinder />)
+    const compareBtn = screen.getByRole('button', { name: /前後半比較/ })
+    fireEvent.click(compareBtn)
+    expect(compareBtn).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('比較モードでは条件サマリーに「前半 vs 後半」が表示される', () => {
+    render(<CourseFinder />)
+    fireEvent.click(screen.getByRole('button', { name: /前後半比較/ }))
+    expect(screen.getByText(/前半 vs 後半/)).toBeInTheDocument()
+  })
+
+  it('比較モードに切り替えると既存のフェーズボタンの aria-pressed は false になる', () => {
+    render(<CourseFinder />)
+    fireEvent.click(screen.getByRole('button', { name: /前後半比較/ }))
+    expect(screen.getByRole('button', { name: /開幕前半/ })).toHaveAttribute('aria-pressed', 'false')
+    expect(screen.getByRole('button', { name: /開催後半/ })).toHaveAttribute('aria-pressed', 'false')
+  })
 })

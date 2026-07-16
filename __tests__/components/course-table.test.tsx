@@ -15,6 +15,7 @@ const mockCourse: CourseData = {
     { style: '逃げ', winRate: 8.4, placeRate: 25.2 },
     { style: '差し', winRate: 18.3, placeRate: 42.1 },
   ],
+  races: 150,
   keyFactor: 'テストファクター',
   note: 'テストノート',
 }
@@ -30,5 +31,16 @@ describe('CourseTable', () => {
     render(<CourseTable course={mockCourse} />)
     expect(screen.getByText(/枠番/)).toBeInTheDocument()
     expect(screen.getByText('8.2%')).toBeInTheDocument()
+  })
+
+  it('races があれば「◯レース集計」を表示する', () => {
+    render(<CourseTable course={mockCourse} />)
+    expect(screen.getByText(/150レース集計/)).toBeInTheDocument()
+  })
+
+  it('races がなければレース集計テキストは表示しない', () => {
+    const noRacesCourse: CourseData = { ...mockCourse, races: undefined }
+    render(<CourseTable course={noRacesCourse} />)
+    expect(screen.queryByText(/レース集計/)).not.toBeInTheDocument()
   })
 })
