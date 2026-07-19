@@ -11,7 +11,7 @@ import {
   getStyleFavorability,
   getBugAlerts,
 } from '@/lib/data/bug-finder'
-import { getCourseStats } from '@/lib/data/course-stats'
+import { getCourseStats, courseStats } from '@/lib/data/course-stats'
 import type { Track, Surface } from '@/lib/types'
 import type { BugAlert, MeetingPhase } from '@/lib/data/bug-finder'
 
@@ -317,6 +317,7 @@ export function CourseFinder() {
   const [surface, setSurface] = useState<Surface>('turf')
   const [distance, setDistance] = useState<number>(1600)
   const [phaseSel, setPhaseSel] = useState<PhaseSel>('early')
+  const [selectedMonth, setSelectedMonth] = useState<number | null>(null)
   const [tab, setTab] = useState<ResultTab>('frame')
 
   // 検索条件の利用計測（初期表示はカウントせず、ユーザー操作による変更のみ送信）
@@ -326,8 +327,8 @@ export function CourseFinder() {
       isInitialSearch.current = false
       return
     }
-    trackEvent('finder_search', { track, surface, distance, phase: phaseSel })
-  }, [track, surface, distance, phaseSel])
+    trackEvent('finder_search', { track, surface, distance, phase: phaseSel, month: selectedMonth ?? 'all' })
+  }, [track, surface, distance, phaseSel, selectedMonth])
 
   // 選択中トラックの距離候補（動的）
   const availableDistances = useMemo(() => {
@@ -339,7 +340,21 @@ export function CourseFinder() {
       .sort((a, b) => a - b)
   }, [track, surface])
 
+  // 現在の（場×馬場×距離）で月別キーが存在する月を昇順に列挙
+  const availableMonths = useMemo(() => {
+    const prefix = `${track}-${surface}-${distance}-m`
+    const months: number[] = []
+    for (const key of Object.keys(courseStats)) {
+      if (key.startsWith(prefix)) {
+        const m = parseInt(key.slice(prefix.length), 10)
+        if (!isNaN(m) && m >= 1 && m <= 12) months.push(m)
+      }
+    }
+    return months.sort((a, b) => a - b)
+  }, [track, surface, distance])
+
   // track / surface 変更時、distance が候補にない場合は先頭へ自動補正
+  // 月選択も次の組み合わせで存在しなければ「全期間」へリセット
   function handleTrackChange(newTrack: Track) {
     setTrack(newTrack)
     const trackInfo = tracks.find((t) => t.id === newTrack)
@@ -347,8 +362,12 @@ export function CourseFinder() {
     const candidates = trackInfo.courses
       .filter((c) => c.surface === surface)
       .map((c) => c.distance)
-    if (!candidates.includes(distance)) {
-      setDistance(candidates[0] ?? distance)
+    const newDist = candidates.includes(distance) ? distance : (candidates[0] ?? distance)
+    if (!candidates.includes(distance)) setDistance(newDist)
+    // 月リセット確認（新しい track×surface×distance で月キーが存在するか）
+    if (selectedMonth !== null) {
+      const newPrefix = `${newTrack}-${surface}-${newDist}-m${selectedMonth}`
+      if (!(newPrefix in courseStats)) setSelectedMonth(null)
     }
   }
 
@@ -359,8 +378,21 @@ export function CourseFinder() {
     const candidates = trackInfo.courses
       .filter((c) => c.surface === newSurface)
       .map((c) => c.distance)
-    if (!candidates.includes(distance)) {
-      setDistance(candidates[0] ?? distance)
+    const newDist = candidates.includes(distance) ? distance : (candidates[0] ?? distance)
+    if (!candidates.includes(distance)) setDistance(newDist)
+    // 月リセット確認
+    if (selectedMonth !== null) {
+      const newPrefix = `${track}-${newSurface}-${newDist}-m${selectedMonth}`
+      if (!(newPrefix in courseStats)) setSelectedMonth(null)
+    }
+  }
+
+  function handleDistanceChange(newDist: number) {
+    setDistance(newDist)
+    // 月リセット確認
+    if (selectedMonth !== null) {
+      const newPrefix = `${track}-${surface}-${newDist}-m${selectedMonth}`
+      if (!(newPrefix in courseStats)) setSelectedMonth(null)
     }
   }
 
@@ -368,15 +400,16 @@ export function CourseFinder() {
   const singlePhase: MeetingPhase = phaseSel === 'compare' ? 'early' : phaseSel
 
   // 結果データ（単独モード）
+  // selectedMonth が指定されている場合は月別データを、そうでなければ従来の phase データを使う
   const frameFavorabilityResult = useMemo(
-    () => getFrameFavorability(track, surface, distance, singlePhase),
-    [track, surface, distance, singlePhase],
+    () => getFrameFavorability(track, surface, distance, singlePhase, selectedMonth ?? undefined),
+    [track, surface, distance, singlePhase, selectedMonth],
   )
   const frameFavorability = frameFavorabilityResult.items
 
   const styleFavorabilityResult = useMemo(
-    () => getStyleFavorability(track, surface, distance, singlePhase),
-    [track, surface, distance, singlePhase],
+    () => getStyleFavorability(track, surface, distance, singlePhase, selectedMonth ?? undefined),
+    [track, surface, distance, singlePhase, selectedMonth],
   )
   const styleFavorability = styleFavorabilityResult.items
 
@@ -407,19 +440,19 @@ export function CourseFinder() {
         lateStyleResult.isRealData
       : frameFavorabilityResult.isRealData || styleFavorabilityResult.isRealData
 
-  // 通常モード用バグアラート
+  // 通常モード用バグアラート（月選択中は出さない）
   const bugAlerts = useMemo(
     () =>
-      phaseSel === 'compare'
+      phaseSel === 'compare' || selectedMonth !== null
         ? []
         : getBugAlerts(track, surface, distance, phaseSel as MeetingPhase),
-    [track, surface, distance, phaseSel],
+    [track, surface, distance, phaseSel, selectedMonth],
   )
 
-  // 比較モード用アラート（各phaseのラベル付き）
+  // 比較モード用アラート（各phaseのラベル付き・月選択中は出さない）
   const compareAlerts = useMemo(
     () =>
-      phaseSel === 'compare'
+      phaseSel === 'compare' && selectedMonth === null
         ? [
             ...getBugAlerts(track, surface, distance, 'early')
               .slice(0, 1)
@@ -429,12 +462,18 @@ export function CourseFinder() {
               .map((a) => ({ ...a, phaseLabel: '開催後半' as const })),
           ]
         : [],
-    [track, surface, distance, phaseSel],
+    [track, surface, distance, phaseSel, selectedMonth],
   )
 
   const trackName = TRACK_CHIPS.find((c) => c.id === track)?.label ?? track
   const surfaceName = surface === 'turf' ? '芝' : 'ダート'
   const phaseInfo = phaseSel !== 'compare' ? MEETING_PHASES[phaseSel] : null
+
+  // 月選択時の races（月別キーから取得）
+  const monthRaces = useMemo(() => {
+    if (selectedMonth === null) return undefined
+    return courseStats[`${track}-${surface}-${distance}-m${selectedMonth}`]?.races
+  }, [track, surface, distance, selectedMonth])
 
   const hasDirtCourses = useMemo(() => {
     const trackInfo = tracks.find((t) => t.id === track)
@@ -580,7 +619,7 @@ export function CourseFinder() {
                 <button
                   key={d}
                   type="button"
-                  onClick={() => setDistance(d)}
+                  onClick={() => handleDistanceChange(d)}
                   aria-pressed={isSelected}
                   className="shrink-0 snap-start rounded px-2 py-1.5 text-xs font-medium transition-colors focus-visible:outline focus-visible:outline-2"
                   style={
@@ -605,12 +644,77 @@ export function CourseFinder() {
         </div>
       </div>
 
-      {/* ── 3列目：開催時期トグル（3ボタン） ── */}
+      {/* ── 3列目：開催月チップ（月別キーが1つ以上あるときのみ表示） ── */}
+      {availableMonths.length > 0 && (
+        <div
+          className="flex gap-1.5 overflow-x-auto pb-0.5 snap-x snap-mandatory mb-3"
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+          role="group"
+          aria-label="開催月選択"
+        >
+          {/* 全期間ボタン */}
+          <button
+            type="button"
+            onClick={() => setSelectedMonth(null)}
+            aria-pressed={selectedMonth === null}
+            className="shrink-0 snap-start rounded px-2 py-1.5 text-xs font-medium transition-colors focus-visible:outline focus-visible:outline-2"
+            style={
+              selectedMonth === null
+                ? {
+                    background: 'var(--color-gold-500)',
+                    color: 'var(--color-paddock-950)',
+                    outlineColor: 'var(--color-gold-500)',
+                  }
+                : {
+                    background: 'var(--color-paddock-800)',
+                    color: 'var(--color-foreground)',
+                    outlineColor: 'var(--color-gold-500)',
+                  }
+            }
+          >
+            全期間
+          </button>
+          {availableMonths.map((m) => {
+            const isSelected = selectedMonth === m
+            return (
+              <button
+                key={m}
+                type="button"
+                onClick={() => setSelectedMonth(m)}
+                aria-pressed={isSelected}
+                className="shrink-0 snap-start rounded px-2 py-1.5 text-xs font-medium transition-colors focus-visible:outline focus-visible:outline-2"
+                style={
+                  isSelected
+                    ? {
+                        background: 'var(--color-gold-500)',
+                        color: 'var(--color-paddock-950)',
+                        outlineColor: 'var(--color-gold-500)',
+                      }
+                    : {
+                        background: 'var(--color-paddock-800)',
+                        color: 'var(--color-foreground)',
+                        outlineColor: 'var(--color-gold-500)',
+                      }
+                }
+              >
+                {m}月
+              </button>
+            )
+          })}
+        </div>
+      )}
+
+      {/* ── 4列目：開催時期トグル（3ボタン）── */}
       <div
         className="grid grid-cols-3 rounded overflow-hidden mb-4"
-        style={{ border: '1px solid var(--color-paddock-700)' }}
+        style={
+          selectedMonth !== null
+            ? { border: '1px solid var(--color-paddock-800)', opacity: 0.4, pointerEvents: 'none' }
+            : { border: '1px solid var(--color-paddock-700)' }
+        }
         role="group"
         aria-label="開催時期選択"
+        aria-disabled={selectedMonth !== null}
       >
         {(Object.entries(MEETING_PHASES) as [MeetingPhase, { label: string; sub: string }][]).map(
           ([key, { label, sub }]) => {
@@ -676,9 +780,11 @@ export function CourseFinder() {
           <p className="mb-2 text-xs" style={{ color: 'var(--color-muted-foreground)' }}>
             <span style={{ color: 'var(--color-foreground)' }}>
               現在の条件：{trackName} {surfaceName}{distance}m
-              {phaseSel === 'compare'
-                ? '（前半 vs 後半）'
-                : `（${phaseInfo!.label}）`}
+              {selectedMonth !== null
+                ? `（${selectedMonth}月）`
+                : phaseSel === 'compare'
+                  ? '（前半 vs 後半）'
+                  : `（${phaseInfo!.label}）`}
             </span>{' '}
             {isRealData && (
               <span
@@ -694,7 +800,15 @@ export function CourseFinder() {
             )}{' '}
             {/* races 表示 */}
             {isRealData && (() => {
-              if (phaseSel === 'compare') {
+              if (selectedMonth !== null) {
+                if (monthRaces !== undefined) {
+                  return (
+                    <span style={{ color: 'var(--color-muted-foreground)' }}>
+                      {`・${monthRaces}レース集計`}
+                    </span>
+                  )
+                }
+              } else if (phaseSel === 'compare') {
                 const earlyRaces = getCourseStats(track, surface, distance, 'early')?.races
                 const lateRaces = getCourseStats(track, surface, distance, 'late')?.races
                 if (earlyRaces !== undefined && lateRaces !== undefined) {
@@ -716,7 +830,7 @@ export function CourseFinder() {
               }
               return null
             })()}{' '}
-            {phaseSel !== 'compare' && <span>{phaseInfo!.sub}</span>}
+            {selectedMonth === null && phaseSel !== 'compare' && <span>{phaseInfo!.sub}</span>}
           </p>
 
           {/* タブ切替 */}
@@ -760,7 +874,7 @@ export function CourseFinder() {
           <AnimatePresence mode="wait">
             {tab === 'frame' ? (
               <motion.div key={`frame-${track}-${surface}-${distance}-${phaseSel}`} {...motionProps}>
-                {phaseSel === 'compare' ? (
+                {phaseSel === 'compare' && selectedMonth === null ? (
                   /* 比較モード：枠順 */
                   earlyFrameResult.isRealData && lateFrameResult.isRealData ? (
                     <>
@@ -836,7 +950,7 @@ export function CourseFinder() {
               </motion.div>
             ) : (
               <motion.div key={`style-${track}-${surface}-${distance}-${phaseSel}`} {...motionProps}>
-                {phaseSel === 'compare' ? (
+                {phaseSel === 'compare' && selectedMonth === null ? (
                   /* 比較モード：脚質 */
                   earlyStyleResult.isRealData && lateStyleResult.isRealData ? (
                     <>
@@ -918,7 +1032,12 @@ export function CourseFinder() {
 
           {/* ★ バグ穴馬アラート（常時表示・タブ外） */}
           <div className="mt-3 flex flex-col gap-2">
-            {phaseSel === 'compare' ? (
+            {selectedMonth !== null ? (
+              /* 月選択中：バグアラートを出さず案内のみ */
+              <NoticeBox>
+                バグ穴馬アラートと開催前半/後半の分析は「全期間」表示で確認できます
+              </NoticeBox>
+            ) : phaseSel === 'compare' ? (
               /* 比較モード：earlyとlateのアラート各1件（フェーズタグ付き） */
               compareAlerts.length === 0 ? (
                 <NoticeBox>{NO_BUG_MESSAGE}</NoticeBox>

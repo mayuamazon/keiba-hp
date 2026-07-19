@@ -1,4 +1,4 @@
-import { mapRatesToLevels } from '@/lib/data/bug-finder'
+import { mapRatesToLevels, getFrameFavorability, getStyleFavorability } from '@/lib/data/bug-finder'
 
 describe('mapRatesToLevels', () => {
   it('空配列を渡すと空配列を返す', () => {
@@ -80,5 +80,60 @@ describe('mapRatesToLevels', () => {
     const result = mapRatesToLevels(stats)
     expect(result[2]).toBe(1)  // +2 → 1
     expect(result[0]).toBe(-1) // -2 → -1
+  })
+})
+
+// ─── month 引数テスト ──────────────────────────────────────────────
+
+describe('getFrameFavorability - month 引数', () => {
+  // kokura-turf-2000-m7 は実在するキー（export_stats.py で生成済み）
+  it('月別キーが存在する場合は isRealData=true で実データを返す', () => {
+    const result = getFrameFavorability('kokura', 'turf', 2000, 'early', 7)
+    expect(result.isRealData).toBe(true)
+    expect(result.items).toHaveLength(8)
+    // 勝率・複勝率が数値として格納されている
+    result.items.forEach((item) => {
+      expect(typeof item.winRate).toBe('number')
+      expect(typeof item.placeRate).toBe('number')
+    })
+  })
+
+  it('月別キーが存在しない場合は isRealData=false でモックを返す（フォールバックなし）', () => {
+    // month=13 は無効なキーなので存在しない
+    const result = getFrameFavorability('kokura', 'turf', 2000, 'early', 13)
+    expect(result.isRealData).toBe(false)
+    // モック分岐では全 level=0 の 8 枠を返す
+    expect(result.items).toHaveLength(8)
+  })
+
+  it('month 未指定の場合は従来どおり phase 引数を使う（後方互換）', () => {
+    // month を渡さない → 従来の phase 分岐へ（既存テストと同じ挙動）
+    const result = getFrameFavorability('tokyo', 'turf', 1600, 'early')
+    // 実データ有無に関わらず isRealData の型が boolean であること
+    expect(typeof result.isRealData).toBe('boolean')
+    expect(result.items.length).toBeGreaterThan(0)
+  })
+})
+
+describe('getStyleFavorability - month 引数', () => {
+  it('月別キーが存在する場合は isRealData=true で実データを返す', () => {
+    const result = getStyleFavorability('kokura', 'turf', 2000, 'early', 7)
+    expect(result.isRealData).toBe(true)
+    expect(result.items.length).toBeGreaterThan(0)
+    result.items.forEach((item) => {
+      expect(typeof item.winRate).toBe('number')
+    })
+  })
+
+  it('月別キーが存在しない場合は isRealData=false でモックを返す', () => {
+    const result = getStyleFavorability('kokura', 'turf', 2000, 'early', 13)
+    expect(result.isRealData).toBe(false)
+    expect(result.items).toHaveLength(4) // 逃げ先行差し追込
+  })
+
+  it('month 未指定の場合は従来どおり動作する（後方互換）', () => {
+    const result = getStyleFavorability('tokyo', 'turf', 1600, 'late')
+    expect(typeof result.isRealData).toBe('boolean')
+    expect(result.items.length).toBeGreaterThan(0)
   })
 })

@@ -75,6 +75,18 @@ function normalizePhase(rawPhase, warn) {
   return p
 }
 
+// ─── month 値の正規化（列なし・空 → undefined） ──────
+// 1〜12 の整数のみ有効。それ以外はWARNしてnull（行スキップ）
+function normalizeMonth(rawMonth, warn) {
+  if (rawMonth === undefined || rawMonth === '') return undefined
+  const m = parseInt(rawMonth, 10)
+  if (isNaN(m) || m < 1 || m > 12) {
+    warn(`month は 1〜12 の整数である必要があります "${rawMonth}"`)
+    return null // null = 行スキップ
+  }
+  return m
+}
+
 // ─── バリデーション：frame_stats ──────────────────────
 function validateFrameRows(rows) {
   const valid = []
@@ -82,6 +94,7 @@ function validateFrameRows(rows) {
   for (const row of rows) {
     const { track_id, surface, distance, frame, win_rate, place_rate, __lineNo } = row
     const rawPhase = row['phase']
+    const rawMonth = row['month']
     const warn = (msg) => {
       console.warn(`[WARN] frame_stats.csv 行${__lineNo}: ${msg} → スキップ`)
       warnCount++
@@ -101,6 +114,17 @@ function validateFrameRows(rows) {
     const phase = normalizePhase(rawPhase, (msg) => { warn(msg); warnCount++ })
     if (phase === null) continue
 
+    // month 列（任意：無い・空 → undefined）
+    const month = normalizeMonth(rawMonth, (msg) => { warn(msg); warnCount++ })
+    if (month === null) continue  // 不正値 → スキップ
+
+    // month と phase(early/late) の複合指定は禁止（phase='all' のみ許容）
+    if (month !== undefined && phase !== 'all') {
+      warn(`month 指定時は phase='all' のみ有効です（phase="${phase}"）`)
+      warnCount++
+      continue
+    }
+
     // races 列（任意：無い・空なら undefined、正の整数のみ有効）
     const rawRaces = row['races']
     let races = undefined
@@ -113,7 +137,7 @@ function validateFrameRows(rows) {
       races = r
     }
 
-    valid.push({ track_id, surface, distance: dist, frame: fr, win_rate: wr, place_rate: pr, phase, races })
+    valid.push({ track_id, surface, distance: dist, frame: fr, win_rate: wr, place_rate: pr, phase, races, month })
   }
   return { valid, warnCount }
 }
@@ -125,6 +149,7 @@ function validateStyleRows(rows) {
   for (const row of rows) {
     const { track_id, surface, distance, style, win_rate, place_rate, __lineNo } = row
     const rawPhase = row['phase']
+    const rawMonth = row['month']
     const warn = (msg) => {
       console.warn(`[WARN] style_stats.csv 行${__lineNo}: ${msg} → スキップ`)
       warnCount++
@@ -143,14 +168,30 @@ function validateStyleRows(rows) {
     const phase = normalizePhase(rawPhase, (msg) => { warn(msg); warnCount++ })
     if (phase === null) continue
 
-    valid.push({ track_id, surface, distance: dist, style, win_rate: wr, place_rate: pr, phase })
+    // month 列（任意：無い・空 → undefined）
+    const month = normalizeMonth(rawMonth, (msg) => { warn(msg); warnCount++ })
+    if (month === null) continue  // 不正値 → スキップ
+
+    // month と phase(early/late) の複合指定は禁止（phase='all' のみ許容）
+    if (month !== undefined && phase !== 'all') {
+      warn(`month 指定時は phase='all' のみ有効です（phase="${phase}"）`)
+      warnCount++
+      continue
+    }
+
+    valid.push({ track_id, surface, distance: dist, style, win_rate: wr, place_rate: pr, phase, month })
   }
   return { valid, warnCount }
 }
 
-// ─── フルキー生成（phase を含む） ────────────────────
+// ─── フルキー生成（phase / month を含む） ─────────────
+// キー体系:
+//   all(月なし):   {track}-{surface}-{distance}          例 'tokyo-turf-2400'
+//   early/late:    {track}-{surface}-{distance}-{phase}  例 'tokyo-turf-2400-early'
+//   月別:          {track}-{surface}-{distance}-m{month} 例 'kokura-turf-2000-m7'
 function makeFullKey(r) {
   const base = `${r.track_id}-${r.surface}-${r.distance}`
+  if (r.month !== undefined) return `${base}-m${r.month}`
   return r.phase === 'all' ? base : `${base}-${r.phase}`
 }
 
@@ -242,9 +283,10 @@ export interface CourseStats {
 
 /**
  * キー体系：
- *   開催全体（all）: \`\${trackId}-\${surface}-\${distance}\`          例 'tokyo-turf-2400'
- *   開幕前半（early）: \`\${trackId}-\${surface}-\${distance}-early\`  例 'tokyo-turf-2400-early'
- *   開催後半（late）:  \`\${trackId}-\${surface}-\${distance}-late\`   例 'tokyo-turf-2400-late'
+ *   開催全体（all）: \`\${trackId}-\${surface}-\${distance}\`           例 'tokyo-turf-2400'
+ *   開幕前半（early）: \`\${trackId}-\${surface}-\${distance}-early\`   例 'tokyo-turf-2400-early'
+ *   開催後半（late）:  \`\${trackId}-\${surface}-\${distance}-late\`    例 'tokyo-turf-2400-late'
+ *   月別（all固定）:   \`\${trackId}-\${surface}-\${distance}-m\${月}\` 例 'kokura-turf-2000-m7'
  */
 export const courseStats: Record<string, CourseStats> = {
 ${entries},
@@ -298,8 +340,13 @@ console.log(`[INFO] style_stats: ${styleRows.length} 行読み込み → ${style
 
 // 両ファイル揃い確認（不一致ならここで中断）
 const validKeys = mergeAndCheck(frameValid, styleValid)
-console.log(`[INFO] 有効コースキー数: ${validKeys.length} 件`)
-console.log(`       キー一覧: ${validKeys.sort().join(', ')}`)
+const phaseKeys = validKeys.filter(k => !/-m\d+$/.test(k))
+const monthKeys = validKeys.filter(k => /-m\d+$/.test(k))
+console.log(`[INFO] 有効キー数: ${validKeys.length} 件（phaseキー: ${phaseKeys.length} / 月別キー: ${monthKeys.length}）`)
+console.log(`       phaseキー一覧: ${phaseKeys.sort().join(', ')}`)
+if (monthKeys.length > 0) {
+  console.log(`       月別キー一覧: ${monthKeys.sort().join(', ')}`)
+}
 
 // TypeScript ソース生成
 const tsContent = buildTS(frameValid, styleValid, args.source, args.period)

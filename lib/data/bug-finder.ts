@@ -59,6 +59,7 @@ export interface FrameFavorabilityResult {
 
 /**
  * 枠順の有利度を返す。
+ * month を指定した場合：月別キー `-m{month}` を直接参照する。キーが存在しなければ isRealData:false。
  * phase 別の実データ（course-stats）が存在する場合はそれを使い、
  * isRealData=true を返す。実データがない場合はモック補正ロジックを使う。
  *
@@ -70,7 +71,31 @@ export function getFrameFavorability(
   surface: Surface,
   distance: number,
   phase: MeetingPhase,
+  month?: number,
 ): FrameFavorabilityResult {
+  // month 指定時は月別キーを直接参照（フォールバックなし）
+  if (month !== undefined) {
+    const monthKey = `${trackId}-${surface}-${distance}-m${month}`
+    const monthStats = courseStats[monthKey]
+    if (monthStats && monthStats.frameStats.length > 0) {
+      const levels = mapRatesToLevels(monthStats.frameStats)
+      const items: FrameFavorability[] = monthStats.frameStats.map((f, i) => ({
+        frame: f.frame,
+        level: levels[i] ?? 0,
+        winRate: f.winRate,
+        placeRate: f.placeRate,
+      }))
+      return { items, isRealData: true }
+    }
+    // キーなし → モック分岐（isRealData:false）へフォールスルー
+    const BASE: FavorabilityLevel[] = [0, 0, 0, 0, 0, 0, 0, 0]
+    const items: FrameFavorability[] = BASE.map((_, i) => ({
+      frame: i + 1,
+      level: 0 as FavorabilityLevel,
+    }))
+    return { items, isRealData: false }
+  }
+
   // phase 別の実データを確認（phaseKeyが直接存在するときのみ実データ扱い。フォールバックはモックとみなす）
   const phaseKey = `${trackId}-${surface}-${distance}-${phase}`
   const hasPhaseData = phaseKey in courseStats
@@ -133,6 +158,7 @@ export interface StyleFavorabilityResult {
 
 /**
  * 脚質の有利度を返す。
+ * month を指定した場合：月別キー `-m{month}` を直接参照する。キーが存在しなければ isRealData:false。
  * phase 別の実データ（course-stats）が存在する場合はそれを使い、
  * isRealData=true を返す。実データがない場合はモック補正ロジックを使う。
  *
@@ -144,7 +170,31 @@ export function getStyleFavorability(
   surface: Surface,
   distance: number,
   phase: MeetingPhase,
+  month?: number,
 ): StyleFavorabilityResult {
+  // month 指定時は月別キーを直接参照（フォールバックなし）
+  if (month !== undefined) {
+    const monthKey = `${trackId}-${surface}-${distance}-m${month}`
+    const monthStats = courseStats[monthKey]
+    if (monthStats && monthStats.runningStyleStats.length > 0) {
+      const levels = mapRatesToLevels(monthStats.runningStyleStats)
+      const ORDER: RunningStyleName[] = ['逃げ', '先行', '差し', '追込']
+      const items: StyleFavorability[] = monthStats.runningStyleStats
+        .map((s, i) => ({
+          style: s.style as RunningStyleName,
+          level: levels[i] ?? 0,
+          winRate: s.winRate,
+          placeRate: s.placeRate,
+        }))
+        .sort((a, b) => ORDER.indexOf(a.style) - ORDER.indexOf(b.style))
+      return { items, isRealData: true }
+    }
+    // キーなし → モック分岐（isRealData:false）
+    const styles: RunningStyleName[] = ['逃げ', '先行', '差し', '追込']
+    const items: StyleFavorability[] = styles.map((style) => ({ style, level: 0 as FavorabilityLevel }))
+    return { items, isRealData: false }
+  }
+
   // phase 別の実データを確認（phaseKeyが直接存在するときのみ実データ扱い。フォールバックはモックとみなす）
   const phaseKey = `${trackId}-${surface}-${distance}-${phase}`
   const hasPhaseData = phaseKey in courseStats

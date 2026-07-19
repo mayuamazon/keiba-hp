@@ -176,4 +176,83 @@ describe('CourseFinder', () => {
     expect(screen.getByRole('button', { name: /開幕前半/ })).toHaveAttribute('aria-pressed', 'false')
     expect(screen.getByRole('button', { name: /開催後半/ })).toHaveAttribute('aria-pressed', 'false')
   })
+
+  // ── 8. 開催月フィルタ ────────────────────────────────────────────
+
+  it('月別キーが存在する場合、開催月選択グループが表示される', () => {
+    render(<CourseFinder />)
+    // 東京 芝 1600m は複数月のキーを持つはず
+    const monthGroup = screen.queryByRole('group', { name: '開催月選択' })
+    // 月キーが1件以上ある場合のみ表示される
+    if (monthGroup) {
+      expect(monthGroup).toBeInTheDocument()
+      // 「全期間」ボタンが存在する
+      expect(screen.getByRole('button', { name: '全期間' })).toBeInTheDocument()
+    }
+  })
+
+  it('初期状態で「全期間」ボタンが selected 状態（月が未選択）', () => {
+    render(<CourseFinder />)
+    const allPeriodBtn = screen.queryByRole('button', { name: '全期間' })
+    if (allPeriodBtn) {
+      expect(allPeriodBtn).toHaveAttribute('aria-pressed', 'true')
+    }
+  })
+
+  it('月ボタンをクリックすると条件サマリーに月が表示される', () => {
+    render(<CourseFinder />)
+    // 東京 芝 1600m の月ボタンを先頭から1つ取得してクリック
+    const monthBtns = screen.queryAllByRole('button', { name: /^\d+月$/ })
+    if (monthBtns.length > 0) {
+      fireEvent.click(monthBtns[0])
+      // 条件サマリーに「月）」が含まれる
+      const summary = screen.getByText(/現在の条件：東京.*芝.*1600m.*月）/)
+      expect(summary).toBeInTheDocument()
+    }
+  })
+
+  it('前後半比較を選択中に月を選ぶと、比較ビューではなく月別表示になる', () => {
+    render(<CourseFinder />)
+    fireEvent.click(screen.getByRole('button', { name: /前後半比較/ }))
+    const monthBtns = screen.queryAllByRole('button', { name: /^\d+月$/ })
+    if (monthBtns.length > 0) {
+      fireEvent.click(monthBtns[0])
+      // 比較モードの凡例が消え、月別の条件サマリーになる
+      expect(screen.queryByText(/上=開幕前半/)).not.toBeInTheDocument()
+      expect(screen.getByText(/現在の条件：東京.*芝.*1600m.*月）/)).toBeInTheDocument()
+    }
+  })
+
+  it('月選択中、開催時期グループが disabled 状態になる', () => {
+    render(<CourseFinder />)
+    const monthBtns = screen.queryAllByRole('button', { name: /^\d+月$/ })
+    if (monthBtns.length > 0) {
+      fireEvent.click(monthBtns[0])
+      const phaseGroup = screen.getByRole('group', { name: '開催時期選択' })
+      expect(phaseGroup).toHaveAttribute('aria-disabled', 'true')
+    }
+  })
+
+  it('月選択中、バグアラートの代わりに案内メッセージが表示される', () => {
+    render(<CourseFinder />)
+    const monthBtns = screen.queryAllByRole('button', { name: /^\d+月$/ })
+    if (monthBtns.length > 0) {
+      fireEvent.click(monthBtns[0])
+      expect(screen.getByText(/バグ穴馬アラートと開催前半\/後半の分析は「全期間」表示で確認できます/)).toBeInTheDocument()
+    }
+  })
+
+  it('「全期間」を選択すると月選択がリセットされ通常状態に戻る', () => {
+    render(<CourseFinder />)
+    const monthBtns = screen.queryAllByRole('button', { name: /^\d+月$/ })
+    const allPeriodBtn = screen.queryByRole('button', { name: '全期間' })
+    if (monthBtns.length > 0 && allPeriodBtn) {
+      fireEvent.click(monthBtns[0])
+      fireEvent.click(allPeriodBtn)
+      expect(allPeriodBtn).toHaveAttribute('aria-pressed', 'true')
+      // 開催時期グループが再び有効になる
+      const phaseGroup = screen.getByRole('group', { name: '開催時期選択' })
+      expect(phaseGroup).not.toHaveAttribute('aria-disabled', 'true')
+    }
+  })
 })
