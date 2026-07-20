@@ -38,21 +38,10 @@ type PhaseSel = MeetingPhase | 'compare'
 
 // ─── 有利度→色マッピング ──────────────────────────────────────────
 
-/** バーの塗り色（赤=有利 青=不利、レベル由来） */
-function levelToBarColor(level: number): string {
-  if (level >= 2) return 'color-mix(in oklab, var(--color-silks-red) 75%, transparent)'
-  if (level === 1) return 'color-mix(in oklab, var(--color-silks-red) 45%, transparent)'
-  if (level === -1) return 'color-mix(in oklab, var(--color-silks-blue) 45%, transparent)'
-  if (level <= -2) return 'color-mix(in oklab, var(--color-silks-blue) 70%, transparent)'
-  return 'color-mix(in oklab, var(--color-gold-600) 40%, transparent)'
-}
-
-/** 脚質カラー共通ルール（course-map と同じ） */
-const STYLE_COLORS: Record<string, string> = {
-  逃げ: 'var(--color-silks-red)',
-  先行: 'var(--color-silks-orange)',
-  差し: 'var(--color-silks-blue)',
-  追込: 'var(--color-silks-purple)',
+/** バーの塗り色（複勝率30%超=赤、それ以外=低彩度金） */
+function placeRateToBarColor(placeRate: number | undefined): string {
+  if ((placeRate ?? 0) > 30) return 'color-mix(in oklab, var(--color-silks-red) 70%, transparent)'
+  return 'color-mix(in oklab, var(--color-gold-600) 30%, transparent)'
 }
 
 /** 勝率・複勝率つきの横バー行（枠順・脚質タブ共通） */
@@ -64,7 +53,6 @@ function StatBarRows({
   rows: {
     key: string
     label: React.ReactNode
-    level: number
     winRate?: number
     placeRate?: number
   }[]
@@ -79,7 +67,7 @@ function StatBarRows({
         <span className="w-11 text-right">勝率</span>
         <span className="w-11 text-right">複勝率</span>
       </div>
-      {rows.map(({ key, label, level, winRate, placeRate }) => (
+      {rows.map(({ key, label, winRate, placeRate }) => (
         <div key={key} role="listitem" className="flex items-center gap-2">
           <span className="w-9 shrink-0 text-xs font-bold" style={{ color: 'var(--color-zekken)' }}>
             {label}
@@ -92,7 +80,7 @@ function StatBarRows({
               className="h-full rounded-sm transition-[width] duration-500"
               style={{
                 width: `${((placeRate ?? 0) / maxPlace) * 100}%`,
-                background: levelToBarColor(level),
+                background: placeRateToBarColor(placeRate),
               }}
             />
           </div>
@@ -134,9 +122,7 @@ function CompareBarRows({
         const arrowColor =
           diff >= 1
             ? 'var(--color-silks-red)'
-            : diff <= -1
-              ? 'var(--color-silks-blue)'
-              : 'var(--color-muted-foreground)'
+            : 'var(--color-muted-foreground)'
         const earlyStr =
           earlyPlaceRate !== undefined ? `${earlyPlaceRate.toFixed(1)}%` : '—'
         const lateStr =
@@ -171,7 +157,7 @@ function CompareBarRows({
                   style={{
                     width: `${latePct}%`,
                     background:
-                      'color-mix(in oklab, var(--color-silks-blue) 55%, transparent)',
+                      'color-mix(in oklab, var(--color-zekken) 30%, transparent)',
                   }}
                 />
               </div>
@@ -292,14 +278,8 @@ const COMPARE_SHORTAGE_MESSAGE =
   'このコースは前半/後半を分けるにはレース数が不足しています。開催時期を個別に選択してください。'
 
 function levelToStyle(level: number): React.CSSProperties {
-  if (level >= 2)
-    return { background: 'color-mix(in oklab, var(--color-silks-red) 30%, var(--color-paddock-800))' }
-  if (level === 1)
-    return { background: 'color-mix(in oklab, var(--color-silks-red) 15%, var(--color-paddock-800))' }
-  if (level === -1)
-    return { background: 'color-mix(in oklab, var(--color-silks-blue) 12%, var(--color-paddock-800))' }
-  if (level <= -2)
-    return { background: 'color-mix(in oklab, var(--color-silks-blue) 22%, var(--color-paddock-800))' }
+  if (level >= 1)
+    return { background: 'color-mix(in oklab, var(--color-silks-red) 20%, var(--color-paddock-800))' }
   return { background: 'var(--color-paddock-800)' }
 }
 
@@ -890,7 +870,7 @@ export function CourseFinder() {
                         }))}
                       />
                       <p className="text-[10px]" style={{ color: 'var(--color-muted-foreground)' }}>
-                        上=開幕前半　下=開催後半（バー=複勝率）　赤字=後半に有利化　青字=後半に不利化
+                        上=開幕前半　下=開催後半（バー=複勝率）　赤字=後半に有利化
                       </p>
                     </>
                   ) : (
@@ -902,10 +882,9 @@ export function CourseFinder() {
                     {frameFavorabilityResult.isRealData ? (
                       <StatBarRows
                         ariaLabel="枠順有利度"
-                        rows={frameFavorability.map(({ frame, level, winRate, placeRate }) => ({
+                        rows={frameFavorability.map(({ frame, winRate, placeRate }) => ({
                           key: String(frame),
                           label: `${frame}枠`,
-                          level,
                           winRate,
                           placeRate,
                         }))}
@@ -942,8 +921,8 @@ export function CourseFinder() {
                     )}
                     <p className="text-[10px]" style={{ color: 'var(--color-muted-foreground)' }}>
                       {frameFavorabilityResult.isRealData
-                        ? 'バーの長さ=複勝率　赤=有利　青=不利'
-                        : '赤=有利　青=不利'}
+                        ? 'バーの長さ=複勝率　赤=複勝率30%超'
+                        : '赤=有利傾向'}
                     </p>
                   </>
                 )}
@@ -960,14 +939,14 @@ export function CourseFinder() {
                           const ls = lateStyleResult.items.find((l) => l.style === es.style)
                           return {
                             key: es.style,
-                            label: <span style={{ color: STYLE_COLORS[es.style] }}>{es.style}</span>,
+                            label: <span style={{ color: 'var(--color-zekken)' }}>{es.style}</span>,
                             earlyPlaceRate: es.placeRate,
                             latePlaceRate: ls?.placeRate,
                           }
                         })}
                       />
                       <p className="text-[10px]" style={{ color: 'var(--color-muted-foreground)' }}>
-                        上=開幕前半　下=開催後半（バー=複勝率）　赤字=後半に有利化　青字=後半に不利化
+                        上=開幕前半　下=開催後半（バー=複勝率）　赤字=後半に有利化
                       </p>
                     </>
                   ) : (
@@ -979,10 +958,9 @@ export function CourseFinder() {
                     {styleFavorabilityResult.isRealData ? (
                       <StatBarRows
                         ariaLabel="脚質有利度"
-                        rows={styleFavorability.map(({ style, level, winRate, placeRate }) => ({
+                        rows={styleFavorability.map(({ style, winRate, placeRate }) => ({
                           key: style,
-                          label: <span style={{ color: STYLE_COLORS[style] }}>{style}</span>,
-                          level,
+                          label: <span style={{ color: 'var(--color-zekken)' }}>{style}</span>,
                           winRate,
                           placeRate,
                         }))}
@@ -1012,8 +990,8 @@ export function CourseFinder() {
                     )}
                     <p className="text-[10px]" style={{ color: 'var(--color-muted-foreground)' }}>
                       {styleFavorabilityResult.isRealData
-                        ? 'バーの長さ=複勝率　赤=有利　青=不利'
-                        : '赤=有利　青=不利'}
+                        ? 'バーの長さ=複勝率　赤=複勝率30%超'
+                        : '赤=有利傾向'}
                     </p>
                   </>
                 )}

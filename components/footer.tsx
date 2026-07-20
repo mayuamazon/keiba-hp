@@ -33,6 +33,12 @@ export function Footer() {
               コース傾向
             </Link>
             <Link
+              href="/graded"
+              className="transition-colors hover:text-gold-400"
+            >
+              重賞データ
+            </Link>
+            <Link
               href="/jockeys"
               className="transition-colors hover:text-gold-400"
             >

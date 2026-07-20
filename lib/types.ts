@@ -38,17 +38,6 @@ export interface TrackInfo {
   courses: CourseData[]
 }
 
-export interface JockeyStat {
-  name: string
-  wins: number
-  rides: number
-  winRate: number
-  placeRate: number
-  recentForm: string
-  strongTracks: Track[]
-  note: string
-  isActive?: boolean
-}
 
 export interface TrainingCheck {
   horseName: string

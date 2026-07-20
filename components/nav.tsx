@@ -10,6 +10,7 @@ import { Menu, X } from 'lucide-react'
 const navLinks = [
   { href: '/report', label: '週次レポート' },
   { href: '/courses', label: 'コース傾向' },
+  { href: '/graded', label: '重賞データ' },
   { href: '/jockeys', label: '騎手データ' },
   { href: '/training', label: '調教チェック' },
 ]
