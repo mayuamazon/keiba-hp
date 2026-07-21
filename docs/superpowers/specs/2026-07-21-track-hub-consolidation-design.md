@@ -41,21 +41,23 @@
 
 状態を1か所に集約し、3セクションはそれぞれ独立に自データを引く純粋な表示ユニットにする。
 
-### 新設 `components/track-hub.tsx`（'use client'）
+### 実装方針：CourseFinderは分解せずprops追加で再利用
 
-- **責務**: 選択state `{ surface, distance, phase, month }` を単一の source of truth として保持し、共有セレクタUIと3セクションを描画する。`track` はURL由来のpropsで固定（トラックチップは持たない）。
+`CourseFinder`（約1000行・距離自動補正/月別/前後半比較/バグ穴馬のstateが密結合）を分解するのは高リスク。代わりに **既存 `CourseFinder` をハブ内でそのまま使い**、選択の連動は「上げて下ろす（lift state up）」で実現する。CourseFinder の内部状態管理は無改造。
+
+### `components/track-hub.tsx`（新設・'use client'）
+
+- **責務**: 「現在の芝ダ・距離」を軽いstate `{ surface, distance }` として保持し、①`CourseFinder`（fixedTrack付き）②`GradedSection`③`JockeySection`を縦に並べる。`track` はURL由来のpropsで固定。
 - **props**: `{ track: Track }`
-- **state**: `surface: Surface`, `distance: number`, `phase: PhaseSel`, `month: number | null`
-- **初期値**: 芝／その競馬場に存在する最小距離／`early`／`null`。
-- **依存**: `tracks`（距離候補算出）, 各セクション子コンポーネント。
-- セレクタ変更ハンドラは現 `CourseFinder` の `handleSurfaceChange` / `handleDistanceChange` / 月リセットロジックを踏襲（距離が候補外なら先頭へ補正、月キーが無ければ全期間へ）。
+- **state**: `sel: { surface: Surface; distance: number }`（初期値は `CourseFinder` の初期選択に合わせ、芝／その競馬場の最小芝距離）。
+- **データフロー**: `<CourseFinder fixedTrack={track} onSelectionChange={setSel} />` が芝ダ・距離変更を通知 → `sel` 更新 → `<GradedSection>` `<JockeySection>` に渡す。CourseFinder自身が距離自動補正なども担うので、hubは通知を受けるだけ。
 
-### `<CourseSection track surface distance phase month />`（`components/course-section.tsx`、`course-finder.tsx` をリネーム再編）
+### `components/course-finder.tsx`（既存を改修・propsを2つ追加）
 
-- 現 `CourseFinder` の「結果エリア以下」（条件サマリー・枠順/脚質タブ・前後半比較・バグ穴馬アラート・コース図）を移植したもの。
-- **競馬場チップ選択UIは削除**（trackはprops）。芝ダ・距離・開催時期・月のUIは `track-hub` 側の共有セレクタに移すため、当セクションは**受け取ったstateで表示するだけ**にする。
-- コース図 `<CourseMap>` は `getCourseGeometry(track)` と選択距離の `runningStyleStats` を使用。
-- 内部ヘルパ（`StatBarRows` / `CompareBarRows` / `AlertCard` / `NoticeBox` など）は現 `course-finder.tsx` から移動または共有。
+- **追加props**（どちらも任意・省略時は現状の挙動を完全維持）:
+  - `fixedTrack?: Track` … 指定時、`track` state の初期値をこれにし、**競馬場チップ行（`role="group" aria-label="競馬場選択"` のブロック）を描画しない**。
+  - `onSelectionChange?: (sel: { surface: Surface; distance: number }) => void` … `surface` / `distance` 変更時に親へ通知。既存の `finder_search` 解析 effect と同じ場所（`useEffect`）で呼ぶ。
+- トップページから使う既存の呼び出し（`<CourseFinder />`）は今回トップから外れるが、propsが任意なので他への影響なし。
 
 ### `<GradedSection track surface distance />`
 
@@ -90,7 +92,7 @@ export function distanceToBand(distance: number): DistanceBand {
 ### `app/courses/[trackId]/page.tsx`（server, 既存を改修）
 
 - `getTrack(trackId)` で検証、無ければ `notFound()`。`generateStaticParams` / `generateMetadata` は据え置き。
-- 本文を `<TrackHub track={track.id} />` に置き換え（現状の直書きコース図＋テーブル羅列は `CourseSection` 側へ移動）。
+- 本文を `<TrackHub track={track.id} />` に置き換え（現状の直書きコース図＋`CourseTable` 羅列は撤去。コース傾向は CourseFinder が担う）。
 
 ### 新設 `components/track-picker.tsx`（'use client' もしくは静的Link集合）
 
@@ -110,21 +112,23 @@ export function distanceToBand(distance: number): DistanceBand {
 ## データフロー
 
 ```
-共有セレクタ操作
-  → track-hub の state 更新（surface / distance / phase / month）
-  → CourseSection: getFrameFavorability / getStyleFavorability / getBugAlerts を state で再計算（useMemo）
+CourseFinder 内の芝ダ/距離セレクタ操作
+  → CourseFinder が自前で再計算（枠質/バグ穴馬） ＝ 既存挙動そのまま
+  → onSelectionChange({surface, distance}) で track-hub に通知
+  → track-hub の sel 更新
   → GradedSection: gradedRaces.filter(track) を surface,distance で並べ替え（useMemo）
   → JockeySection: distanceToBand(distance) → jockeyRankings のキー解決＋フォールバック（useMemo）
 ```
 
-`track` は不変（URL固定）なので、再計算は surface/distance/phase/month の変化のみに依存。
+`track` は不変（URL固定）。開催時期/月/前後半比較は CourseFinder 内部で完結し、②③には影響しない（②③は芝ダ・距離のみに反応）。
 
 ## 分割・境界（設計原則の確認）
 
 - `distanceToBand` は副作用なしの純関数 → 単体テスト容易。
 - 3セクションは props `(track, surface, distance, [phase, month])` を受け取り内部で自データを引く独立ユニット。単体でレンダリング確認できる（何をするか・どう使うか・何に依存するかが明確）。
-- `track-hub` は状態と配線のみを持ち、表示ロジックは各セクションに委譲 → ファイル肥大を防ぐ。
-- 現 `course-finder.tsx`（約1000行）は「トラック選択state＋表示」が混在している。移植時に「共有セレクタ（track-hub）」「表示部（CourseSection）」へ分離することで、それぞれが小さく追いやすくなる。これは今回の目的に直接資する整理であり、無関係なリファクタは行わない。
+- `track-hub` は「軽いsel state＋3セクションの配線」のみを持つ薄いコンテナ。表示ロジックは各セクション/既存コンポーネントに委譲。
+- `CourseFinder` は分解しない。約1000行の密結合stateを触ると回帰リスクが高いため、任意propsの追加（後方互換）に留める＝**単純化レビュー原則（最小変更・無関係リファクタ回避）** に忠実。
+- 重賞カード・騎手テーブルは既存クライアントから表示部を共通コンポーネントに切り出し、`/graded` `/jockeys` とハブで共有（DRY）。
 
 ## フォールバック / エラーハンドリング
 
@@ -141,8 +145,8 @@ export function distanceToBand(distance: number): DistanceBand {
 - `distanceToBand`: 境界値 1400/1401/1600/1601/2200/2201 と代表値（1200→sprint, 2400→long）。
 - 騎手キーのフォールバック解決関数: 完全一致あり／`surface`一致のみ／全欠損の3系統で期待キーを返すこと。
 - `GradedSection`: あるtrackで該当重賞が先頭に来ること、0件で注記が出ること。
-- `TrackHub` レンダリング: 距離変更で JockeySection のキーが切り替わること（band境界をまたぐ距離で検証）。
-- 既存 `CourseFinder` 系テスト（`__tests__/components`）が `CourseSection` 移植後も通ること（必要に応じてテスト対象を差し替え）。
+- `JockeySection`: 距離を変えると band が切り替わり別キーのTOP5になること、欠損キーでフォールバック注記が出ること。
+- `CourseFinder` に `fixedTrack` を渡すと競馬場チップが消え、`onSelectionChange` が芝ダ/距離変更で呼ばれること。**props無指定の既存挙動が変わらないこと**（既存 `__tests__/components/course-finder.test.tsx` が通る）。
 - `app/courses/[trackId]`: 不正trackで404。
 
 ## スコープ外（YAGNI）
@@ -154,16 +158,21 @@ export function distanceToBand(distance: number): DistanceBand {
 ## 影響ファイル一覧
 
 新設:
-- `components/track-hub.tsx`
-- `components/track-picker.tsx`
-- `lib/distance-band.ts`
-- （必要なら）`components/graded-race-card.tsx` / `components/jockey-rank-list.tsx`（既存クライアントから表示部を切り出す場合）
+- `lib/distance-band.ts`（純関数＋テスト）
+- `components/graded-race-card.tsx`（`GradedCard` を graded-client から切り出し・export）
+- `components/jockey-rank-table.tsx`（騎手テーブル表示部を jockeys-client から切り出し。渡された rows をそのまま順位表示。件数の絞り込みは呼び出し側で slice）
+- `components/track-graded.tsx`（`GradedSection`）
+- `components/track-jockeys.tsx`（`JockeySection`）
+- `components/track-hub.tsx`（薄いコンテナ）
+- `components/track-picker.tsx`（トップの競馬場ピッカー）
 
 改修:
-- `app/courses/[trackId]/page.tsx`
-- `app/page.tsx`
-- `components/nav.tsx`
-- `components/course-finder.tsx` → **`components/course-section.tsx` にリネームして中身を `CourseSection` に再編**（トラックチップと共有セレクタ相当を除去し、props駆動の表示部にする）。ファイル削除はせずリネームで移すことで dead code を残さない。旧 `CourseFinder` の import は撤去済みになる。
+- `components/course-finder.tsx`（任意props `fixedTrack` / `onSelectionChange` を追加。既存挙動は不変）
+- `app/graded/graded-client.tsx`（`GradedCard` を新ファイルから import に変更）
+- `app/jockeys/jockeys-client.tsx`（テーブル部を `JockeyRankTable` の利用に置換）
+- `app/courses/[trackId]/page.tsx`（`<TrackHub>` を描画）
+- `app/page.tsx`（`CourseFinder` → `TrackPicker`）
+- `components/nav.tsx`（CTAアンカー張り替え）
 
 存続（変更なし想定）:
-- `app/graded/*`, `app/jockeys/*`, `lib/data/*`
+- `app/graded/page.tsx`, `app/jockeys/page.tsx`, `lib/data/*`
