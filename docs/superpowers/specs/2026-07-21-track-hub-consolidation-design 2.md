@@ -47,14 +47,10 @@
 
 ### `components/track-hub.tsx`（新設・'use client'）
 
-- **責務**: 「現在の芝ダ・距離」を軽いstate `{ surface, distance }` として保持し、①コース特性（コース図＋`CourseFinder`＋キーファクター）②`GradedSection`③`JockeySection`を縦に並べる。`track` はURL由来のpropsで固定。
+- **責務**: 「現在の芝ダ・距離」を軽いstate `{ surface, distance }` として保持し、①`CourseFinder`（fixedTrack付き）②`GradedSection`③`JockeySection`を縦に並べる。`track` はURL由来のpropsで固定。
 - **props**: `{ track: Track }`
-- **state**: `sel: { surface: Surface; distance: number }`（初期値は `CourseFinder` の初期選択に合わせ、芝1600）。
-- **データフロー**: `<CourseFinder fixedTrack={track} onSelectionChange={setSel} />` が芝ダ・距離変更を通知 → `sel` 更新 → コース図の脚質統計・キーファクター・`GradedSection`・`JockeySection` に反映。CourseFinder自身が距離自動補正なども担うので、hubは通知を受けるだけ。
-- **①の内訳（現ハブページの機能を落とさない）**:
-  - `CourseMap`（インタラクティブコース図）… 現 `/courses/[trackId]` から移設。`getCourseGeometry(track)` で geometry を取得し、あればガード付きで表示。
-  - `CourseFinder`（枠質バー＋バグ穴馬＋開催時期/前後半比較/月別）。
-  - **キーファクター＋note カード**（選択中コースの `keyFactor` / `note` の prose）… 現 `CourseTable` のうち「文章の特性」部分を選択コースぶんだけ表示。選択コースは `getTrack(track).courses.find(surface,distance)`。統計テーブルは `CourseFinder` と重複するため出さない。
+- **state**: `sel: { surface: Surface; distance: number }`（初期値は `CourseFinder` の初期選択に合わせ、芝／その競馬場の最小芝距離）。
+- **データフロー**: `<CourseFinder fixedTrack={track} onSelectionChange={setSel} />` が芝ダ・距離変更を通知 → `sel` 更新 → `<GradedSection>` `<JockeySection>` に渡す。CourseFinder自身が距離自動補正なども担うので、hubは通知を受けるだけ。
 
 ### `components/course-finder.tsx`（既存を改修・propsを2つ追加）
 
@@ -96,7 +92,7 @@ export function distanceToBand(distance: number): DistanceBand {
 ### `app/courses/[trackId]/page.tsx`（server, 既存を改修）
 
 - `getTrack(trackId)` で検証、無ければ `notFound()`。`generateStaticParams` / `generateMetadata` は据え置き。
-- 本文を `<TrackHub track={track.id} />` に置き換え（現状の直書きコース図＋`CourseTable` 羅列は撤去。コース図は TrackHub に移設、コース傾向は CourseFinder、文章の特性は TrackHub のキーファクターカードが担う）。
+- 本文を `<TrackHub track={track.id} />` に置き換え（現状の直書きコース図＋`CourseTable` 羅列は撤去。コース傾向は CourseFinder が担う）。
 
 ### 新設 `components/track-picker.tsx`（'use client' もしくは静的Link集合）
 
@@ -164,7 +160,7 @@ CourseFinder 内の芝ダ/距離セレクタ操作
 新設:
 - `lib/distance-band.ts`（純関数＋テスト）
 - `components/graded-race-card.tsx`（`GradedCard` を graded-client から切り出し・export）
-- `components/jockey-rank-table.tsx`（騎手テーブル表示部を jockeys-client から切り出し。渡された rows をそのまま順位表示。件数の絞り込みは呼び出し側で slice）
+- `components/jockey-rank-table.tsx`（騎手テーブル表示部を jockeys-client から切り出し・`limit` 対応）
 - `components/track-graded.tsx`（`GradedSection`）
 - `components/track-jockeys.tsx`（`JockeySection`）
 - `components/track-hub.tsx`（薄いコンテナ）
@@ -178,6 +174,5 @@ CourseFinder 内の芝ダ/距離セレクタ操作
 - `app/page.tsx`（`CourseFinder` → `TrackPicker`）
 - `components/nav.tsx`（CTAアンカー張り替え）
 
-存続（変更なし・削除しない）:
+存続（変更なし想定）:
 - `app/graded/page.tsx`, `app/jockeys/page.tsx`, `lib/data/*`
-- `components/course-map.tsx`（TrackHub から再利用）、`components/course-table.tsx`（`/courses/[trackId]` からは参照されなくなるが削除しない）
