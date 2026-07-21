@@ -8,6 +8,7 @@ const config: Config = {
   testEnvironment: 'jsdom',
   setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
   moduleNameMapper: {
+    '^@/(.*)$': '<rootDir>/$1',
     '^@vercel/analytics(/.*)?$': '<rootDir>/__mocks__/vercel-analytics.ts',
   },
 }

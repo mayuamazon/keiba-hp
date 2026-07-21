@@ -3,7 +3,7 @@ import { getAllReportMeta } from '@/lib/reports'
 import { ReportCard } from '@/components/report-card'
 import { Hero } from '@/components/hero'
 import { AccuracyBanner } from '@/components/accuracy-banner'
-import { CourseFinder } from '@/components/course-finder'
+import { TrackPicker } from '@/components/track-picker'
 import { GateReveal } from '@/components/motion/gate-reveal'
 import { HoverLift } from '@/components/motion/hover-lift'
 
@@ -39,8 +39,8 @@ export default async function HomePage() {
       <Hero />
 
       <div className="mx-auto max-w-6xl px-4 py-4">
-        {/* ② CourseFinder（ファーストビュー内・即表示） */}
-        <CourseFinder />
+        {/* ② 競馬場ピッカー（選ぶとハブページへ） */}
+        <TrackPicker />
       </div>
 
       <div className="mx-auto max-w-6xl px-4 py-8">
