@@ -1,8 +1,6 @@
 import { notFound } from 'next/navigation'
 import { tracks, getTrack } from '@/lib/data/courses'
-import { getCourseGeometry } from '@/lib/data/course-geometry'
-import { CourseTable } from '@/components/course-table'
-import { CourseMap } from '@/components/course-map'
+import { TrackHub } from '@/components/track-hub'
 import type { Metadata } from 'next'
 
 interface Props {
@@ -18,8 +16,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const track = getTrack(trackId)
   if (!track) return { title: '404 | 馬券ファクト' }
   return {
-    title: `${track.name} コース傾向 | 馬券ファクト`,
-    description: `${track.name}の全コース傾向データ。枠番成績・脚質傾向・重要ファクターを掲載。`,
+    title: `${track.name} コース傾向・重賞・騎手 | 馬券ファクト`,
+    description: `${track.name}のコース傾向・重賞レースの特徴・得意な騎手TOP5を1ページで。枠番成績・脚質傾向・バグ穴馬も掲載。`,
   }
 }
 
@@ -28,30 +26,13 @@ export default async function TrackPage({ params }: Props) {
   const track = getTrack(trackId)
   if (!track) notFound()
 
-  const geometry = getCourseGeometry(track.id)
-  // courses[0] の runningStyleStats をコース図に渡す（代表コース・存在しない場合は undefined）
-  const primaryStyleStats = track.courses[0]?.runningStyleStats
-
   return (
-    <div className="mx-auto max-w-4xl px-4 py-12">
-      <p className="text-sm text-muted-foreground">コース傾向 / {track.name}</p>
-      <h1 className="mt-1 font-heading text-2xl text-gold-400">{track.name}</h1>
-
-      {/* インタラクティブコース図（ジオメトリが定義された競馬場のみ表示・統計なしでも表示） */}
-      {geometry && (
-        <div className="mt-6">
-          <CourseMap geometry={geometry} styleStats={primaryStyleStats} />
-        </div>
-      )}
-
-      <div className="mt-8 flex flex-col gap-6">
-        {track.courses.map((course) => (
-          <CourseTable
-            key={`${course.trackId}-${course.surface}-${course.distance}`}
-            course={course}
-          />
-        ))}
+    <>
+      <div className="mx-auto max-w-4xl px-4 pt-12">
+        <p className="text-sm text-muted-foreground">コース傾向 / {track.name}</p>
+        <h1 className="mt-1 font-heading text-2xl text-gold-400">{track.name}</h1>
       </div>
-    </div>
+      <TrackHub track={track.id} />
+    </>
   )
 }
