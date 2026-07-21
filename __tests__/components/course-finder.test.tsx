@@ -255,4 +255,25 @@ describe('CourseFinder', () => {
       expect(phaseGroup).not.toHaveAttribute('aria-disabled', 'true')
     }
   })
+
+  it('fixedTrack を渡すと競馬場チップ行が表示されない', () => {
+    render(<CourseFinder fixedTrack="nakayama" />)
+    // 競馬場選択 group（aria-label="競馬場選択"）が無いこと
+    expect(screen.queryByRole('group', { name: '競馬場選択' })).toBeNull()
+    // 中山の条件サマリーが出ること
+    expect(screen.getAllByText(/中山/).length).toBeGreaterThan(0)
+  })
+
+  it('onSelectionChange が芝ダ変更時に呼ばれる', () => {
+    const onSel = jest.fn()
+    render(<CourseFinder onSelectionChange={onSel} />)
+    onSel.mockClear()
+    // 馬場トグルの「ダ」を押す（aria-label="馬場選択" group 内）
+    const surfaceGroup = screen.getByRole('group', { name: '馬場選択' })
+    fireEvent.click(within(surfaceGroup).getByRole('button', { name: 'ダ' }))
+    expect(onSel).toHaveBeenCalled()
+    const arg = onSel.mock.calls[onSel.mock.calls.length - 1][0]
+    expect(arg.surface).toBe('dirt')
+    expect(typeof arg.distance).toBe('number')
+  })
 })

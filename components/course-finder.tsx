@@ -289,11 +289,18 @@ type ResultTab = 'frame' | 'style'
 
 // ─── コンポーネント ───────────────────────────────────────────────
 
-export function CourseFinder() {
+interface CourseFinderProps {
+  /** 指定時：この競馬場に固定し、競馬場チップ行を非表示にする（ハブページ用） */
+  fixedTrack?: Track
+  /** 芝ダ・距離が変わるたびに親へ通知（ハブページ用） */
+  onSelectionChange?: (sel: { surface: Surface; distance: number }) => void
+}
+
+export function CourseFinder({ fixedTrack, onSelectionChange }: CourseFinderProps = {}) {
   const shouldReduceMotion = useReducedMotion()
 
   // ─ State ─
-  const [track, setTrack] = useState<Track>('tokyo')
+  const [track, setTrack] = useState<Track>(fixedTrack ?? 'tokyo')
   const [surface, setSurface] = useState<Surface>('turf')
   const [distance, setDistance] = useState<number>(1600)
   const [phaseSel, setPhaseSel] = useState<PhaseSel>('early')
@@ -309,6 +316,11 @@ export function CourseFinder() {
     }
     trackEvent('finder_search', { track, surface, distance, phase: phaseSel, month: selectedMonth ?? 'all' })
   }, [track, surface, distance, phaseSel, selectedMonth])
+
+  // 親へ現在の芝ダ・距離を通知（ハブ連動用）。初回マウント含め常に最新を渡す。
+  useEffect(() => {
+    onSelectionChange?.({ surface, distance })
+  }, [surface, distance, onSelectionChange])
 
   // 選択中トラックの距離候補（動的）
   const availableDistances = useMemo(() => {
@@ -487,41 +499,43 @@ export function CourseFinder() {
       </div>
 
       {/* ── 1列目：競馬場チップ（5列×2行） ── */}
-      <div
-        className="grid gap-1 mb-3"
-        style={{ gridTemplateColumns: 'repeat(5, 1fr)' }}
-        role="group"
-        aria-label="競馬場選択"
-      >
-        {TRACK_CHIPS.map(({ id, label }) => {
-          const isSelected = track === id
-          return (
-            <button
-              key={id}
-              type="button"
-              onClick={() => handleTrackChange(id)}
-              aria-pressed={isSelected}
-              className="rounded py-1.5 text-xs font-medium transition-colors focus-visible:outline focus-visible:outline-2"
-              style={
-                isSelected
-                  ? {
-                      background: 'var(--color-gold-500)',
-                      color: 'var(--color-paddock-950)',
-                      outlineColor: 'var(--color-gold-500)',
-                    }
-                  : {
-                      background: 'transparent',
-                      color: 'var(--color-foreground)',
-                      border: '1px solid var(--color-paddock-700)',
-                      outlineColor: 'var(--color-gold-500)',
-                    }
-              }
-            >
-              {label}
-            </button>
-          )
-        })}
-      </div>
+      {!fixedTrack && (
+        <div
+          className="grid gap-1 mb-3"
+          style={{ gridTemplateColumns: 'repeat(5, 1fr)' }}
+          role="group"
+          aria-label="競馬場選択"
+        >
+          {TRACK_CHIPS.map(({ id, label }) => {
+            const isSelected = track === id
+            return (
+              <button
+                key={id}
+                type="button"
+                onClick={() => handleTrackChange(id)}
+                aria-pressed={isSelected}
+                className="rounded py-1.5 text-xs font-medium transition-colors focus-visible:outline focus-visible:outline-2"
+                style={
+                  isSelected
+                    ? {
+                        background: 'var(--color-gold-500)',
+                        color: 'var(--color-paddock-950)',
+                        outlineColor: 'var(--color-gold-500)',
+                      }
+                    : {
+                        background: 'transparent',
+                        color: 'var(--color-foreground)',
+                        border: '1px solid var(--color-paddock-700)',
+                        outlineColor: 'var(--color-gold-500)',
+                      }
+                }
+              >
+                {label}
+              </button>
+            )
+          })}
+        </div>
+      )}
 
       {/* ── 2列目：馬場トグル＋距離チップ ── */}
       <div className="flex items-start gap-2 mb-3">
