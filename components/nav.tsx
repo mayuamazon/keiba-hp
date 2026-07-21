@@ -75,7 +75,7 @@ export function Nav() {
         {/* Desktop CTA + mobile hamburger */}
         <div className="flex items-center gap-3">
           <Link
-            href="/#finder"
+            href="/courses"
             className="hidden rounded bg-gold-500 px-3 py-1.5 text-sm font-semibold text-paddock-950 transition-colors hover:bg-gold-400 md:block"
           >
             コース検索
@@ -161,7 +161,7 @@ export function Nav() {
                 className="mt-3"
               >
                 <Link
-                  href="/#finder"
+                  href="/courses"
                   onClick={() => setMobileOpen(false)}
                   className="block rounded bg-gold-500 px-4 py-2.5 text-center text-sm font-semibold text-paddock-950 transition-colors hover:bg-gold-400"
                 >
