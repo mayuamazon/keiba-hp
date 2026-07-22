@@ -45,14 +45,24 @@ export async function getAllArticleMeta(): Promise<ArticleListItem[]> {
     .sort((a, b) => b.date.localeCompare(a.date))
 }
 
+/** 日本語 slug は動的パラメータで percent-encoded のまま渡ることがあるため復号する（% を含まなければ no-op） */
+function safeDecode(slug: string): string {
+  try {
+    return slug.includes('%') ? decodeURIComponent(slug) : slug
+  } catch {
+    return slug
+  }
+}
+
 /** 単一記事（published 問わず本文取得。ページ側で存在判定に使う） */
 export async function getArticleBySlug(
   slug: string
 ): Promise<{ meta: ArticleListItem; content: string } | null> {
-  const fullPath = path.join(ARTICLES_DIR, `${slug}.mdx`)
+  const decoded = safeDecode(slug)
+  const fullPath = path.join(ARTICLES_DIR, `${decoded}.mdx`)
   if (!fs.existsSync(fullPath)) return null
 
   const raw = fs.readFileSync(fullPath, 'utf8')
   const { data, content } = matter(raw)
-  return { meta: toMeta(slug, data), content }
+  return { meta: toMeta(decoded, data), content }
 }
