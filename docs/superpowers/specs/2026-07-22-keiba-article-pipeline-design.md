@@ -66,7 +66,7 @@
 
 | # | エージェント名 | 役割 | 入力 → 出力 | モデル | ツール |
 |---|---|---|---|---|---|
-| 1 | `keiba-fact-collector` | データ収集 | レース名 → ファクトシート(md)。枠/脚質/人気/距離の傾向・歴代勝ち馬（過去5年）。散文ゼロ・数字のみ | Sonnet | Bash(sqlite/backtest.py), Read |
+| 1 | `keiba-fact-collector` | データ収集 | レース名 → ファクトシート(md)。枠/脚質/人気/距離の傾向・**得意騎手・得意厩舎（美浦/栗東マクロ含む）**・歴代勝ち馬（過去5年）。散文ゼロ・数字のみ | Sonnet | Bash(sqlite/backtest.py), Read |
 | 2 | `keiba-outliner` | SEO構成設計 | ファクトシート → SEO骨子（狙いKW「◯◯記念 傾向」・検索意図・h2/h3見出し・タイトル案5・meta description案） | Sonnet | Read, Write |
 | 3 | `keiba-writer` | 執筆 | 骨子＋ファクトシート → 本文MDX（VIPラウンジ調・冒頭フックで読ませる・今週馬はプレースホルダ） | Sonnet | Read, Write |
 | 4 | `keiba-seo` | SEO最適化 | 本文MDX → frontmatter(ArticleMeta準拠)・meta・JSON-LD補助情報・`/courses`/`/graded`内部リンク・見出し構造チェック | Sonnet | Read, Edit |
@@ -109,5 +109,6 @@
 ## 非目標（YAGNI）
 
 - 今週の出馬表の自動取得（JRA WebFetch）は行わない。今週馬はプレースホルダ運用。
+- **血統（父・種牡馬）は扱わない**：`jra_master_5y.sqlite` に血統列が無く、創作ゼロ原則を守れないため。将来やるなら「血統データ取り込み」を別プロジェクトで（2026-07-22 まゆ判断で今回見送り）。騎手・厩舎はDBに列があるため常設セクション化（母数が小さいので勝率%でなく勝利数・複勝数で提示）。
 - 自動公開しない（まゆの手動公開を維持）。
 - X投稿生成は既存の週次運用（`docs/article-workflow.md`）が担うため本システムの必須工程には含めない（将来オプション）。

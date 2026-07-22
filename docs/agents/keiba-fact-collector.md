@@ -17,8 +17,13 @@ model: sonnet
    - 脚質別成績：`... --by style`
    - 人気別成績：`... --by popularity --pop-max 8`
    - 前後半比較（必要時）：`... --by phase,frame`
-3. 歴代勝ち馬は `/graded` の元データ（`lib/data/graded-races*.ts` または `scripts/jravan/export_graded.py` の出力）から該当重賞を参照。
-4. **データ不足チェック**：該当条件のレース数が薄い（各グループ 10レース未満が大半）場合、ファクトシート冒頭に `## ⚠️ データ不足` と明記し、司令塔にパイプライン停止を促す。
+3. **騎手・厩舎**（`data/jra_master_5y.sqlite` を `sqlite3` で直接集計。母数が薄いので勝率%ではなく「勝利数・複勝数・母数」で出す）：
+   - 得意騎手：`SELECT jockey, COUNT(*) rides, SUM(finish=1) wins, SUM(finish<=3) top3 FROM results WHERE place='<場>' AND surface='<芝/ダ>' AND distance=<距離> AND is_jump=0 GROUP BY jockey HAVING rides>=8 ORDER BY wins DESC, top3 DESC LIMIT 8;`
+   - 得意厩舎：同様に `GROUP BY trainer HAVING runs>=6`（`COUNT(*) runs, SUM(finish=1) wins, SUM(finish<=3) top3`）。
+   - 美浦/栗東マクロ：`SELECT stable, COUNT(*) n FROM ... GROUP BY stable;`（`美`=美浦/関東・`栗`=栗東/関西。どちらが優勢かの頑健な事実）。
+   - **血統（父・種牡馬）はDBに列が無いので集計しない**（`## 血統` セクションは作らない。創作ゼロ原則）。
+4. 歴代勝ち馬は `/graded` の元データ（`lib/data/graded-races*.ts` または `scripts/jravan/export_graded.py` の出力）から該当重賞を参照。
+5. **データ不足チェック**：該当条件のレース数が薄い（各グループ 10レース未満が大半）場合、ファクトシート冒頭に `## ⚠️ データ不足` と明記し、司令塔にパイプライン停止を促す。騎手・厩舎は個別母数が小さいので、フロア未満は「母数不足のため掲載なし」と明記（0や推測で埋めない）。
 
 ## 出力
 `content/articles/drafts/_pipeline/<slug>/1-facts.md` に Write。フォーマット：
@@ -28,8 +33,10 @@ model: sonnet
 - 脚質別 複勝率テーブル（数字）
 - 人気別 勝率/複勝率テーブル（数字）
 - 前後半で傾向が変わる場合はその差
+- 得意騎手テーブル（騎手・騎乗数・勝利数・複勝数。フロア≥8）
+- 得意厩舎テーブル（厩舎・母数・勝利数・複勝数。フロア≥6）＋美浦/栗東の頭数マクロ
 - 歴代勝ち馬リスト（年・馬名・人気・枠・脚質）
-- データ元コマンド（再現用に実行した backtest.py コマンドを併記）
+- データ元コマンド（再現用に実行した backtest.py / sqlite3 コマンドを併記）
 
 ## 絶対ルール
 - **数字は backtest.py / sqlite の出力のみ**。推測値・創作値を書かない。
