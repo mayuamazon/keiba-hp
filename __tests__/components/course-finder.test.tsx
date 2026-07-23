@@ -276,4 +276,27 @@ describe('CourseFinder', () => {
     expect(arg.surface).toBe('dirt')
     expect(typeof arg.distance).toBe('number')
   })
+
+  it('4タブ（枠順・脚質・騎手・レース）が表示される', () => {
+    render(<CourseFinder fixedTrack="tokyo" />)
+    const tablist = screen.getByRole('tablist', { name: '結果タブ' })
+    ;['枠順', '脚質', '騎手', 'レース'].forEach((label) => {
+      expect(within(tablist).getByRole('tab', { name: label })).toBeInTheDocument()
+    })
+  })
+
+  it('騎手タブでは開催時期トグルが消え、騎手データが出る', () => {
+    render(<CourseFinder fixedTrack="tokyo" />)
+    // 初期（枠順）は開催時期トグルがある
+    expect(screen.getByRole('group', { name: '開催時期選択' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('tab', { name: '騎手' }))
+    expect(screen.queryByRole('group', { name: '開催時期選択' })).toBeNull()
+    expect(screen.getByRole('link', { name: /騎手ランキング全体を見る/ })).toBeInTheDocument()
+  })
+
+  it('レースタブでは重賞データが出る', () => {
+    render(<CourseFinder fixedTrack="tokyo" />)
+    fireEvent.click(screen.getByRole('tab', { name: 'レース' }))
+    expect(screen.getByRole('link', { name: /重賞データベース全体を見る/ })).toBeInTheDocument()
+  })
 })

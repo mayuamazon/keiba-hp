@@ -6,8 +6,6 @@ import { getTrack } from '@/lib/data/courses'
 import { getCourseGeometry } from '@/lib/data/course-geometry'
 import { CourseMap } from '@/components/course-map'
 import { CourseFinder } from '@/components/course-finder'
-import { GradedSection } from '@/components/track-graded'
-import { JockeySection } from '@/components/track-jockeys'
 
 export function TrackHub({ track }: { track: Track }) {
   // CourseFinder の初期選択（芝1600）に合わせる。
@@ -20,7 +18,6 @@ export function TrackHub({ track }: { track: Track }) {
   const trackInfo = getTrack(track)
   const geometry = getCourseGeometry(track)
 
-  // 選択中コース（存在すれば keyFactor / note と、コース図に渡す脚質統計を得る）
   const selectedCourse = useMemo(
     () => trackInfo?.courses.find((c) => c.surface === sel.surface && c.distance === sel.distance),
     [trackInfo, sel.surface, sel.distance],
@@ -29,16 +26,10 @@ export function TrackHub({ track }: { track: Track }) {
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
-      {/* ① コース特性 */}
-      {geometry && (
-        <div className="mb-6">
-          <CourseMap geometry={geometry} styleStats={styleStats} />
-        </div>
-      )}
-
+      {/* ① コース検索＋4タブ（枠順/脚質/騎手/レース） */}
       <CourseFinder fixedTrack={track} onSelectionChange={setSel} />
 
-      {/* 選択コースの文章の特性（keyFactor / note）。統計は CourseFinder と重複させない */}
+      {/* 選択コースの文章の特性（keyFactor / note） */}
       {selectedCourse && (
         <div className="mt-4 rounded-lg border border-paddock-700 bg-paddock-900 p-4">
           <div className="rounded border-l-2 border-gold-500 bg-paddock-800 px-3 py-2.5">
@@ -51,11 +42,17 @@ export function TrackHub({ track }: { track: Track }) {
         </div>
       )}
 
-      {/* ② 重賞 */}
-      <GradedSection track={track} surface={sel.surface} distance={sel.distance} />
-
-      {/* ③ 騎手TOP5 */}
-      <JockeySection track={track} surface={sel.surface} distance={sel.distance} />
+      {/* コース図：折りたたみ（既定は閉じてファーストビューを軽くする） */}
+      {geometry && (
+        <details className="mt-4 rounded-lg border border-paddock-700 bg-paddock-900">
+          <summary className="cursor-pointer px-4 py-3 text-sm font-heading font-semibold text-gold-400">
+            コース図
+          </summary>
+          <div className="px-4 pb-4">
+            <CourseMap geometry={geometry} styleStats={styleStats} />
+          </div>
+        </details>
+      )}
     </div>
   )
 }

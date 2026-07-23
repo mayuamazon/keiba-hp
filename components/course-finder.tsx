@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useMemo, useEffect, useRef } from 'react'
-import Link from 'next/link'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
+import { JockeySection } from '@/components/track-jockeys'
+import { GradedSection } from '@/components/track-graded'
 import { track as trackEvent } from '@vercel/analytics'
 import { tracks } from '@/lib/data/courses'
 import {
@@ -285,7 +286,7 @@ function levelToStyle(level: number): React.CSSProperties {
 
 // ─── タブ型 ──────────────────────────────────────────────────────
 
-type ResultTab = 'frame' | 'style'
+type ResultTab = 'frame' | 'style' | 'jockey' | 'race'
 
 // ─── コンポーネント ───────────────────────────────────────────────
 
@@ -638,6 +639,43 @@ export function CourseFinder({ fixedTrack, onSelectionChange }: CourseFinderProp
         </div>
       </div>
 
+      {/* ── 結果タブ（4種）：芝ダ・距離の直下に置き、iPhone で気づける位置に ── */}
+      <div className="flex gap-1 mb-3" role="tablist" aria-label="結果タブ">
+        {(['frame', 'style', 'jockey', 'race'] as ResultTab[]).map((t) => {
+          const label =
+            t === 'frame' ? '枠順' : t === 'style' ? '脚質' : t === 'jockey' ? '騎手' : 'レース'
+          const isSelected = tab === t
+          return (
+            <button
+              key={t}
+              type="button"
+              role="tab"
+              aria-selected={isSelected}
+              onClick={() => setTab(t)}
+              className="rounded px-3 py-1 text-xs font-medium transition-colors focus-visible:outline focus-visible:outline-2"
+              style={
+                isSelected
+                  ? {
+                      background: 'var(--color-gold-500)',
+                      color: 'var(--color-paddock-950)',
+                      outlineColor: 'var(--color-gold-500)',
+                    }
+                  : {
+                      background: 'var(--color-paddock-800)',
+                      color: 'var(--color-muted-foreground)',
+                      outlineColor: 'var(--color-gold-500)',
+                    }
+              }
+            >
+              {label}
+            </button>
+          )
+        })}
+      </div>
+
+      {/* 開催月・開催時期は枠順/脚質タブのときだけ表示 */}
+      {(tab === 'frame' || tab === 'style') && (
+        <>
       {/* ── 3列目：開催月チップ（月別キーが1つ以上あるときのみ表示） ── */}
       {availableMonths.length > 0 && (
         <div
@@ -766,9 +804,11 @@ export function CourseFinder({ fixedTrack, onSelectionChange }: CourseFinderProp
           <span className="text-[10px] leading-tight opacity-80">変化を確認</span>
         </button>
       </div>
+        </>
+      )}
 
-      {/* ── 結果エリア ── */}
-      {availableDistances.length > 0 && (
+      {/* ── 結果エリア（枠順/脚質タブのときのみ） ── */}
+      {(tab === 'frame' || tab === 'style') && availableDistances.length > 0 && (
         <div>
           {/* 条件サマリー */}
           <p className="mb-2 text-xs" style={{ color: 'var(--color-muted-foreground)' }}>
@@ -826,43 +866,6 @@ export function CourseFinder({ fixedTrack, onSelectionChange }: CourseFinderProp
             })()}{' '}
             {selectedMonth === null && phaseSel !== 'compare' && <span>{phaseInfo!.sub}</span>}
           </p>
-
-          {/* タブ切替 */}
-          <div
-            className="flex gap-1 mb-3"
-            role="tablist"
-            aria-label="結果タブ"
-          >
-            {(['frame', 'style'] as ResultTab[]).map((t) => {
-              const label = t === 'frame' ? '枠順' : '脚質'
-              const isSelected = tab === t
-              return (
-                <button
-                  key={t}
-                  type="button"
-                  role="tab"
-                  aria-selected={isSelected}
-                  onClick={() => setTab(t)}
-                  className="rounded px-3 py-1 text-xs font-medium transition-colors focus-visible:outline focus-visible:outline-2"
-                  style={
-                    isSelected
-                      ? {
-                          background: 'var(--color-gold-500)',
-                          color: 'var(--color-paddock-950)',
-                          outlineColor: 'var(--color-gold-500)',
-                        }
-                      : {
-                          background: 'var(--color-paddock-800)',
-                          color: 'var(--color-muted-foreground)',
-                          outlineColor: 'var(--color-gold-500)',
-                        }
-                  }
-                >
-                  {label}
-                </button>
-              )
-            })}
-          </div>
 
           {/* タブコンテンツ（AnimatePresenceでフェード切替） */}
           <AnimatePresence mode="wait">
@@ -1013,15 +1016,6 @@ export function CourseFinder({ fixedTrack, onSelectionChange }: CourseFinderProp
             )}
           </AnimatePresence>
 
-          {/* コース詳細ページへの導線 */}
-          <Link
-            href={`/courses/${track}`}
-            className="mt-2 inline-block text-[11px] underline underline-offset-2"
-            style={{ color: 'var(--color-gold-400)' }}
-          >
-            {trackName}競馬場のコース図・全距離データを見る →
-          </Link>
-
           {/* ★ バグ穴馬アラート（常時表示・タブ外） */}
           <div className="mt-3 flex flex-col gap-2">
             {selectedMonth !== null ? (
@@ -1049,6 +1043,16 @@ export function CourseFinder({ fixedTrack, onSelectionChange }: CourseFinderProp
             )}
           </div>
         </div>
+      )}
+
+      {/* 騎手タブ：得意な騎手TOP5（大見出しは省略） */}
+      {tab === 'jockey' && (
+        <JockeySection track={track} surface={surface} distance={distance} embedded />
+      )}
+
+      {/* レースタブ：重賞レースの成績（大見出しは省略） */}
+      {tab === 'race' && (
+        <GradedSection track={track} surface={surface} distance={distance} embedded />
       )}
     </section>
   )
