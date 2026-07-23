@@ -11,27 +11,26 @@ jest.mock('framer-motion', () => ({
   },
 }))
 
-// コース図は内部で SVGPathElement.getPointAtLength を使うため、合成テストではダミー化
 jest.mock('@/components/course-map', () => ({
   CourseMap: () => <div data-testid="course-map" />,
 }))
 
 describe('TrackHub', () => {
-  it('コース図＋3セクション（コース検索・重賞・騎手TOP5）が揃う', () => {
+  it('CourseFinder（4タブ）とキーファクターが出る', () => {
     render(<TrackHub track="tokyo" />)
-    expect(screen.getByTestId('course-map')).toBeInTheDocument()
-    expect(screen.getByText('コース傾向＆バグ穴馬検索')).toBeInTheDocument()
-    expect(screen.getByText('重賞レースの特徴')).toBeInTheDocument()
-    expect(screen.getByText('得意な騎手 TOP5')).toBeInTheDocument()
-  })
-
-  it('選択中コースのキーファクターが表示される', () => {
-    render(<TrackHub track="tokyo" />)
+    expect(screen.getByRole('tablist', { name: '結果タブ' })).toBeInTheDocument()
     expect(screen.getByText(/キーファクター/)).toBeInTheDocument()
   })
 
-  it('競馬場チップは出ない（trackは固定）', () => {
+  it('騎手・重賞は独立セクション見出しとしては出ない（タブ内に移動）', () => {
     render(<TrackHub track="tokyo" />)
-    expect(screen.queryByRole('group', { name: '競馬場選択' })).toBeNull()
+    expect(screen.queryByText('得意な騎手 TOP5')).toBeNull()
+    expect(screen.queryByText('重賞レースの特徴')).toBeNull()
+  })
+
+  it('コース図は折りたたみ（summary）で存在する', () => {
+    render(<TrackHub track="tokyo" />)
+    expect(screen.getByText('コース図')).toBeInTheDocument()
+    expect(screen.getByTestId('course-map')).toBeInTheDocument()
   })
 })
