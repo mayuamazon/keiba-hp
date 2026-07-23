@@ -46,4 +46,15 @@ describe('GradedSection', () => {
     render(<GradedSection track="hakodate" surface="turf" distance={1200} allRaces={races} />)
     expect(screen.getByText(/重賞データは準備中/)).toBeInTheDocument()
   })
+
+  it('embedded では大見出しを省略し、本体は出す', () => {
+    render(<GradedSection track="tokyo" surface="turf" distance={1600} allRaces={races} embedded />)
+    expect(screen.queryByText('重賞レースの特徴')).toBeNull()
+    expect(screen.getByRole('link', { name: /重賞データベース全体を見る/ })).toBeInTheDocument()
+  })
+
+  it('embedded なしでは大見出しを出す（後方互換）', () => {
+    render(<GradedSection track="tokyo" surface="turf" distance={1600} allRaces={races} />)
+    expect(screen.getByText('重賞レースの特徴')).toBeInTheDocument()
+  })
 })

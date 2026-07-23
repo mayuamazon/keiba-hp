@@ -14,12 +14,15 @@ export function GradedSection({
   surface,
   distance,
   allRaces = gradedRaces,
+  embedded = false,
 }: {
   track: Track
   surface: Surface
   distance: number
   /** テスト差し込み用。省略時は本番データ。 */
   allRaces?: GradedRace[]
+  /** タブ内埋め込み時は大見出しを省略する */
+  embedded?: boolean
 }) {
   const races = useMemo(() => {
     const forTrack = allRaces.filter((r) => r.trackId === track)
@@ -34,15 +37,17 @@ export function GradedSection({
   }, [allRaces, track, surface, distance])
 
   return (
-    <section aria-label="重賞レースの特徴" className="mt-10">
-      <div className="mb-3">
-        <p className="text-xs tracking-widest" style={{ color: 'var(--color-gold-600)' }}>
-          GRADED RACES
-        </p>
-        <h2 className="font-heading text-sm font-semibold sm:text-base" style={{ color: 'var(--color-gold-400)' }}>
-          重賞レースの特徴
-        </h2>
-      </div>
+    <section aria-label="重賞レースの特徴" className={embedded ? '' : 'mt-10'}>
+      {!embedded && (
+        <div className="mb-3">
+          <p className="text-xs tracking-widest" style={{ color: 'var(--color-gold-600)' }}>
+            GRADED RACES
+          </p>
+          <h2 className="font-heading text-sm font-semibold sm:text-base" style={{ color: 'var(--color-gold-400)' }}>
+            重賞レースの特徴
+          </h2>
+        </div>
+      )}
 
       {races.length === 0 ? (
         <p
