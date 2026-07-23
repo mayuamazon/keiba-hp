@@ -36,12 +36,15 @@ export function JockeySection({
   surface,
   distance,
   rankings = jockeyRankings,
+  embedded = false,
 }: {
   track: Track
   surface: Surface
   distance: number
   /** テスト差し込み用。省略時は本番データ。 */
   rankings?: Record<string, JockeyRankRow[]>
+  /** タブ内埋め込み時は大見出しを省略する */
+  embedded?: boolean
 }) {
   const { rows, fallback } = useMemo(
     () => resolveJockeyKey(rankings, track, surface, distance),
@@ -50,15 +53,17 @@ export function JockeySection({
   const top5 = rows.slice(0, 5)
 
   return (
-    <section aria-label="得意な騎手TOP5" className="mt-10">
-      <div className="mb-3">
-        <p className="text-xs tracking-widest" style={{ color: 'var(--color-gold-600)' }}>
-          TOP JOCKEYS
-        </p>
-        <h2 className="font-heading text-sm font-semibold sm:text-base" style={{ color: 'var(--color-gold-400)' }}>
-          得意な騎手 TOP5
-        </h2>
-      </div>
+    <section aria-label="得意な騎手TOP5" className={embedded ? '' : 'mt-10'}>
+      {!embedded && (
+        <div className="mb-3">
+          <p className="text-xs tracking-widest" style={{ color: 'var(--color-gold-600)' }}>
+            TOP JOCKEYS
+          </p>
+          <h2 className="font-heading text-sm font-semibold sm:text-base" style={{ color: 'var(--color-gold-400)' }}>
+            得意な騎手 TOP5
+          </h2>
+        </div>
+      )}
 
       {fallback && (
         <p className="mb-2 text-[11px]" style={{ color: 'var(--color-muted-foreground)' }}>

@@ -24,4 +24,16 @@ describe('JockeySection', () => {
     expect(screen.getByText('ダート全体騎手')).toBeInTheDocument()
     expect(screen.getByText(/集計を表示/)).toBeInTheDocument()
   })
+
+  it('embedded では大見出しを省略し、本体は出す', () => {
+    render(<JockeySection track="tokyo" surface="turf" distance={1600} rankings={rankings} embedded />)
+    expect(screen.queryByText('得意な騎手 TOP5')).toBeNull()
+    expect(screen.getByText('マイル騎手1')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /騎手ランキング全体を見る/ })).toBeInTheDocument()
+  })
+
+  it('embedded なしでは大見出しを出す（後方互換）', () => {
+    render(<JockeySection track="tokyo" surface="turf" distance={1600} rankings={rankings} />)
+    expect(screen.getByText('得意な騎手 TOP5')).toBeInTheDocument()
+  })
 })
